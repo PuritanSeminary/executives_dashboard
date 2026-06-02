@@ -1,0 +1,85 @@
+/* color-logic.css — Apply Aero Blue consistently as info/context.
+   Per the dashboard's documented color logic (see "How to read"):
+     red  = action / alert / problem
+     gold = warn / attention
+     blue = info / context (NEVER means action)
+     green= positive
+   This file re-routes elements that read as context but currently
+   render in red, so blue does its job across the dashboard.
+   Loads LAST so it wins over the per-layout overrides.
+*/
+
+/* ─── Agenda times (09:00, 15:00 …) — pure scheduling context ─── */
+.hero-today__time,
+body:is(.layout-editorial, .layout-editorial-compact) .hero-today__time,
+body.layout-compact .hero-today__time,
+body.layout-brand .hero-today__time {
+  color: var(--blue);
+}
+
+/* ─── "TODAY · THU 28 MAY · DR. NEELE" kicker dot ─── */
+.hero-today__kicker::before,
+body:is(.layout-editorial, .layout-editorial-compact) .hero-today__kicker::before,
+body.layout-brand .hero-today__kicker::before {
+  background: var(--blue);
+}
+
+/* ─── Hero context pills ("FIVE-YEAR HIGH", "ALL DEPARTMENTS", etc.) ─
+   These tag the metric with secondary context. They're not alerts —
+   route them to blue so users can scan red = problem at a glance. */
+.hero__label .pill {
+  background: var(--blue-soft);
+  color: var(--blue-deep);
+  border-color: transparent;
+}
+/* Triangle: light blue on the deep-blue brand pill, deep blue on the
+   blue-soft default pill — always contrasts with the pill background. */
+.hero__label .pill::before {
+  border-bottom-color: var(--blue) !important;
+  border-left-color: transparent !important;
+}
+body.layout-brand .hero__label .pill {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+body.layout-brand .hero__label .pill::before {
+  /* Make the triangle big enough to read against the deep-blue pill. */
+  border-left-width: 5px;
+  border-right-width: 5px;
+  border-bottom-width: 7px;
+  border-bottom-color: var(--blue-soft) !important;
+}
+body:is(.layout-editorial, .layout-editorial-compact) .hero__label .pill {
+  background: transparent;
+  color: var(--blue);
+  border: 1px solid var(--blue);
+}
+
+/* ─── KPI band: surface info/context KPIs with blue label color ─── */
+.kpi--info .kpi__label {
+  color: var(--blue);
+}
+
+/* ─── Block kicker eyebrows ("Donations · Trailing 12 mo" …) ───
+   .block__sub / .section__aside hold context lines. Make the strong
+   portion blue so context labels read as context, not as alerts. */
+.block__sub strong,
+.section__aside strong {
+  color: var(--blue);
+}
+
+/* ─── Department / source tags ─── */
+.dept-tag,
+.tag--info,
+.tbl .label .dept,
+.tbl .dept-tag {
+  color: var(--blue);
+}
+
+/* ─── Hero-summary header tick is currently red in editorial; align
+   with the blue context accent used elsewhere. ─── */
+body:is(.layout-editorial, .layout-editorial-compact) .hero-summary__title::before,
+body.layout-brand .hero-summary__title::before {
+  background: var(--blue);
+}
