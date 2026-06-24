@@ -1,0 +1,1157 @@
+/* customize.css — Overview customization (edit mode) styles.
+   Two visual treatments share the same data + DOM; they differ in chrome.
+   .custom-bar--editorial  → strict dashed outlines, no motion
+   .custom-bar--tactile    → rounded handles, subtle wobble on KPI tiles
+*/
+
+/* ─── Customize button (resting state) ─────────────────────── */
+/* Lives in the sidebar (#sidebar-customize-slot), just above the
+   "How to read" utility item. Falls back to a chip above the page
+   head if the slot isn't present (other tabs / non-overview views). */
+.sidebar__customize-slot {
+  padding: 0 16px 6px;
+  display: flex;
+  justify-content: stretch;
+}
+.sidebar__customize-slot:empty { display: none; }
+.sidebar__customize-slot .custom-btn {
+  width: 100%;
+  justify-content: center;
+}
+.pagehead-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  position: relative;
+}
+.pagehead-action {
+  align-self: flex-end;
+  order: -1;
+  margin-bottom: 14px;
+  z-index: 5;
+}
+.pagehead-row > .pagehead { width: 100%; }
+
+.custom-btn {
+  appearance: none;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.12s, color 0.12s;
+}
+.custom-btn:hover { background: var(--ink); color: var(--paper); }
+.custom-btn--customized {
+  border-color: var(--red);
+  color: var(--red);
+}
+.custom-btn--customized:hover { background: var(--red); color: var(--paper); }
+.custom-btn__dot {
+  width: 6px; height: 6px; background: var(--red); display: inline-block;
+  border-radius: 50%;
+  margin-left: 2px;
+}
+.custom-btn--customized:hover .custom-btn__dot { background: var(--paper); }
+
+/* Position the customize button in the page head's meta column */
+.pagehead .custom-btn {
+  align-self: flex-start;
+}
+
+/* ─── Customize action bar (edit mode active) ──────────────────
+   A compact toolbar pinned to the bottom-centre of the content area.
+   Fixed (not sticky) so Reset/Done are always reachable no matter how
+   far the user has scrolled, and small enough that it never crowds the
+   top chrome on a laptop screen. */
+.custom-bar {
+  position: fixed;
+  left: calc(50% + var(--sidebar, 0px) / 2);
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 120;
+  width: max-content;
+  max-width: min(620px, calc(100vw - 28px));
+  margin: 0;
+}
+body.sidebar-hidden .custom-bar { left: 50%; }
+.custom-bar__inner {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 10px 12px 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 999px;
+  box-shadow: 0 18px 40px -10px rgba(28, 28, 28, 0.42), 0 2px 8px rgba(28, 28, 28, 0.16);
+}
+.custom-bar__sq {
+  width: 9px; height: 9px; background: var(--red);
+  display: inline-block; flex-shrink: 0;
+  border-radius: 50%;
+}
+.custom-bar__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+}
+.custom-bar__text strong {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.custom-bar__text em {
+  font-style: normal;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.custom-bar__btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: var(--paper);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 18px;
+  cursor: pointer;
+  border-radius: 999px;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s;
+}
+.custom-bar__btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.6); }
+.custom-bar__btn--primary {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--paper);
+  margin-left: 2px;
+}
+.custom-bar__btn--primary:hover { background: var(--red-deep); border-color: var(--red-deep); }
+.custom-bar__btn--toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.custom-bar__btn--toggle.is-open {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+.custom-bar__count {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--red);
+  color: var(--paper);
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  letter-spacing: 0;
+}
+
+/* Narrow screens: shed the hint line and keep a tight pill of
+   [status] · Reset · Done so the controls never wrap or overflow. */
+@media (max-width: 1100px) {
+  .custom-bar__text em { display: none; }
+}
+@media (max-width: 560px) {
+  .custom-bar { left: 50%; max-width: calc(100vw - 20px); }
+  .custom-bar__text { display: none; }
+  .custom-bar__btn { padding: 9px 13px; }
+}
+
+/* When editing, dim the page background subtly so the active chrome reads */
+body.editing-overview {
+  background: #ECECEE;
+}
+html[data-theme="dark"] body.editing-overview {
+  background: var(--vellum);
+}
+
+/* ─── Section frame (vertical drag + eye toggle) ───────────── */
+.sec-frame {
+  position: relative;
+  border: 1px solid var(--rule);
+  padding: 40px 14px 16px;
+  margin: 0 -14px 18px;
+  transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+  background: var(--paper);
+  border-radius: 12px;
+}
+.sec-frame:hover {
+  border-color: var(--ink-faint);
+  box-shadow: 0 2px 12px -6px rgba(28, 28, 28, 0.12);
+}
+.sec-frame[draggable="true"]:active { cursor: grabbing; }
+.sec-frame--dragging {
+  opacity: 0.45;
+  border-color: var(--ink);
+  box-shadow: 0 12px 28px -8px rgba(28, 28, 28, 0.24);
+}
+.sec-frame__chrome {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 32px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  user-select: none;
+  border-radius: 12px 12px 0 0;
+}
+.sec-frame__handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: grab;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+.sec-frame__handle:active { cursor: grabbing; }
+.sec-frame__handle svg { color: rgba(255, 255, 255, 0.55); flex-shrink: 0; }
+.sec-frame__eye {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: var(--paper);
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.12s, border-color 0.12s;
+}
+.sec-frame__eye:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.6); }
+.sec-frame__body .section { margin-top: 0; }
+
+/* Drop indicator between sections — rounded red bar */
+.sec-frame__drop {
+  position: absolute;
+  left: 6px; right: 6px;
+  height: 4px;
+  background: var(--red);
+  z-index: 2;
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px rgba(218, 32, 55, 0.18);
+}
+.sec-frame__drop--above { top: -4px; }
+.sec-frame__drop--below { bottom: -4px; }
+
+/* ─── KPI tile frame (X to remove, drag-swap) ──────────────── */
+.kpi-frame {
+  position: relative;
+  outline: 1px solid var(--rule);
+  outline-offset: -1px;
+  border-radius: 10px;
+  transition: outline-color 0.12s, transform 0.12s;
+}
+.kpi-frame[draggable="true"] { cursor: grab; }
+.kpi-frame[draggable="true"]:active { cursor: grabbing; }
+.kpi-frame--dragging {
+  opacity: 0.4;
+  outline-color: var(--ink);
+}
+.kpi-frame--target {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
+}
+.kpi-frame--target::after {
+  /* "swap" ghost label */
+  content: 'Swap';
+  position: absolute;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--red);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 999px;
+}
+
+/* Make .kpi-frame behave like a .kpi cell within the grid: fill the
+   column, replicate the right-side rule, and let the inner .kpi sit flush. */
+.kpis > .kpi-frame {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--paper);
+}
+.kpis > .kpi-frame > .kpi {
+  border-right: 0;
+  flex: 1;
+  background: transparent;
+}
+.kpi-frame__x {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 22px; height: 22px;
+  appearance: none;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  z-index: 2;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.kpi-frame__x:hover { background: var(--red); border-color: var(--red); color: var(--paper); }
+.kpi-frame__grip {
+  position: absolute;
+  top: 50%; left: 4px;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Tactile = same chrome, just adds the wobble on KPI tiles. The Editorial
+   treatment skips the wobble. (Rounded corners are the default now.) */
+
+/* Tactile wobble: only when editing, applied to KPI tiles */
+@keyframes kpi-wobble {
+  0%   { transform: rotate(-0.6deg); }
+  50%  { transform: rotate(0.6deg); }
+  100% { transform: rotate(-0.6deg); }
+}
+.custom-bar--tactile ~ .report .kpis .kpi-frame {
+  animation: kpi-wobble 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
+.custom-bar--tactile ~ .report .kpis .kpi-frame:nth-child(2n) {
+  animation-delay: -0.4s;
+}
+.custom-bar--tactile ~ .report .kpis .kpi-frame:nth-child(3n) {
+  animation-delay: -0.8s;
+}
+.custom-bar--tactile ~ .report .kpis .kpi-frame--dragging,
+.custom-bar--tactile ~ .report .kpis .kpi-frame--target {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .custom-bar--tactile ~ .report .kpis .kpi-frame { animation: none; }
+}
+
+/* ─── Module palette drawer (right side, sticky) ───────────── */
+.modpal {
+  position: fixed;
+  left: calc(50% + var(--sidebar, 0px) / 2);
+  bottom: 84px;
+  transform: translateX(-50%);
+  width: min(340px, calc(100vw - 28px));
+  max-height: min(58vh, calc(100vh - 170px));
+  z-index: 119;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px -16px rgba(28, 28, 28, 0.34), 0 4px 12px rgba(28, 28, 28, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modpal-rise 0.16s cubic-bezier(.22,.7,.32,1);
+}
+body.sidebar-hidden .modpal { left: 50%; }
+@media (max-width: 520px) {
+  .modpal { left: 50%; width: calc(100vw - 20px); }
+}
+@keyframes modpal-rise {
+  from { transform: translate(-50%, 12px); }
+  to   { transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modpal { animation: none; }
+}
+.modpal__hd {
+  display: flex; align-items: center; gap: 9px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.modpal__hd-close {
+  margin-left: auto;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-4);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 999px;
+  transition: background 0.12s, color 0.12s;
+}
+.modpal__hd-close:hover { background: var(--vellum); color: var(--ink); }
+.modpal__sq { width: 8px; height: 8px; background: var(--red); border-radius: 50%; }
+.modpal__body {
+  overflow-y: auto;
+  padding: 6px 0 10px;
+}
+.modpal__group { padding: 8px 0; }
+.modpal__group + .modpal__group { border-top: 1px solid var(--rule); }
+.modpal__group-hd {
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding: 6px 16px 10px;
+}
+.modpal__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0 6px;
+  border-radius: 10px;
+  transition: background 0.12s;
+}
+.modpal__item:hover { background: var(--vellum); }
+.modpal__item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.modpal__item-text strong {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.modpal__item-text em {
+  font-style: normal;
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--ink-4);
+  letter-spacing: 0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.modpal__empty {
+  padding: 4px 16px 8px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--ink-4);
+}
+.modpal__add {
+  appearance: none;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  cursor: pointer;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.modpal__add:hover:not(:disabled) { background: var(--red); border-color: var(--red); color: var(--paper); }
+.modpal__add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── Hero picker (change-metric overlay) ──────────────────── */
+/* In edit mode, the hero, agenda, and hero-summary reserve a small top
+   strip so controls never overlap content. The strip lives ABOVE the
+   block's normal content; controls sit inside it. */
+body.editing-overview:not(.edit-homescreen) .hero,
+body.editing-overview:not(.edit-homescreen) .hero-today,
+body.editing-overview:not(.edit-homescreen) .hero-summary {
+  padding-top: 44px;
+  position: relative;
+}
+body.editing-overview:not(.edit-homescreen) .hero::before,
+body.editing-overview:not(.edit-homescreen) .hero-today::before,
+body.editing-overview:not(.edit-homescreen) .hero-summary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 32px;
+  background: var(--vellum);
+  border-bottom: 1px solid var(--rule);
+  z-index: 1;
+}
+
+.hero-pick {
+  position: absolute;
+  /* Anchored bottom-right (over the sparkline) so it never covers the
+     metric's status badge in the label row up top. */
+  top: auto; bottom: 14px; right: 10px;
+  z-index: 4;
+}
+.hero-pick__btn {
+  appearance: none;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+.hero-pick__btn:hover { background: var(--ink); color: var(--paper); }
+.hero-pick__menu {
+  position: absolute;
+  /* Opens upward — the button sits near the tile's bottom edge. */
+  top: auto; bottom: calc(100% + 6px); right: 0;
+  width: 220px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px -10px rgba(28, 28, 28, 0.28), 0 2px 6px rgba(28, 28, 28, 0.06);
+  z-index: 6;
+  overflow: hidden;
+}
+.hero-pick__hd {
+  padding: 10px 14px;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  border-bottom: 1px solid var(--rule);
+}
+.hero-pick__opt {
+  width: calc(100% - 12px);
+  margin: 2px 6px;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.hero-pick__opt:hover { background: var(--vellum); }
+.hero-pick__opt[aria-selected="true"] { background: var(--vellum); font-weight: 600; }
+.hero-pick__tick { color: var(--red); width: 12px; text-align: center; }
+
+/* ─── Agenda position segmented control ────────────────────── */
+.agenda-pos {
+  position: absolute;
+  top: 5px; right: 8px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agenda-pos__lbl {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.agenda-pos__seg {
+  display: inline-flex;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+.agenda-pos__seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: background 0.12s, color 0.12s;
+}
+.agenda-pos__seg button:hover { background: var(--vellum); }
+.agenda-pos__seg button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.agenda-pos__seg button[aria-pressed="true"]:hover { background: var(--ink); }
+
+/* Make hero / hero-today / agenda host the absolute overlays */
+.hero, .hero-today { position: relative; }
+.hero-row .hero-today { position: relative; }
+
+/* Tile-band parent needs to allow per-cell drop targets */
+.kpis { position: relative; }
+
+/* ─── Hero row in 'agenda-top' mode ─────────────────────────
+   When agendaPos === 'top', we render the agenda block ABOVE the
+   hero-row and the hero-row becomes a 2-col grid (hero + summary).
+   The HTML class .hero-row--no-agenda triggers it. */
+.hero-row--no-agenda {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) !important;
+}
+body:is(.layout-editorial, .layout-editorial-compact) .hero-row--no-agenda {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) !important;
+}
+body.layout-compact .hero-row--no-agenda {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) !important;
+}
+body.layout-brand .hero-row--no-agenda {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) !important;
+}
+
+/* Solo mode — only the hero OR the attention panel remains. Compound with
+   --no-agenda so this out-specifies every per-layout two-column rule above. */
+.hero-row--no-agenda.hero-row--solo,
+body.layout-brand .hero-row--no-agenda.hero-row--solo,
+body.layout-compact .hero-row--no-agenda.hero-row--solo,
+body:is(.layout-editorial, .layout-editorial-compact) .hero-row--no-agenda.hero-row--solo {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* Top-positioned agenda gets its own block above the hero row */
+.hero-today--top {
+  margin-bottom: 24px;
+  border: 1px solid var(--ink);
+  background: var(--vellum);
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 0;
+  padding: 18px 18px 16px;
+  min-height: 0;
+  position: relative;
+}
+.hero-today--top .hero-today__kicker { margin-bottom: 0; }
+.hero-today--top .hero-today__list {
+  border-top: 0;
+  padding-left: 18px;
+  border-left: 1px solid var(--ink-faint);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+}
+.hero-today--top .hero-today__row {
+  border-bottom: 0;
+  border-right: 1px solid var(--rule);
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.hero-today--top .hero-today__row:last-child { border-right: 0; }
+.hero-today--top .hero-today__row:first-child { padding-left: 0; }
+
+body:is(.layout-editorial, .layout-editorial-compact) .hero-today--top {
+  background: var(--paper);
+}
+
+@media (max-width: 1100px) {
+  .hero-today--top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hero-today--top .hero-today__list {
+    border-left: 0; padding-left: 0;
+    grid-template-columns: 1fr;
+  }
+  .hero-today--top .hero-today__row {
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 0;
+    display: grid;
+    grid-template-columns: 50px 1fr;
+  }
+}
+
+/* In edit mode, push the report content to leave room for the side palette */
+body.editing-overview .report {
+  padding-right: 312px;
+}
+@media (max-width: 1280px) {
+  body.editing-overview .report { padding-right: var(--pad-x); }
+  .modpal {
+    width: 240px;
+  }
+}
+
+/* When palette is rendered, dim everything else slightly so the active
+   region pops; not too much — we still want the page readable while editing. */
+body.editing-overview .pagehead { opacity: 0.92; }
+
+/* Print: customize chrome is hidden */
+@media print {
+  .custom-btn, .custom-bar, .modpal,
+  .sec-frame__chrome, .kpi-frame__x, .kpi-frame__grip,
+  .hero-pick, .agenda-pos,
+  .tbl__grip, .tbl__hide, .finding-wrap__chrome {
+    display: none !important;
+  }
+  .sec-frame {
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .kpi-frame { outline: 0 !important; animation: none !important; }
+}
+
+/* ─── Row-level customization (tables + finding cards) ─────── */
+.tbl--editing tr {
+  position: relative;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.tbl--editing tbody tr[draggable="true"] { cursor: grab; }
+.tbl--editing tbody tr[draggable="true"]:active { cursor: grabbing; }
+.tbl--editing tbody tr:hover {
+  background: var(--vellum);
+}
+.tbl--editing tbody tr.tr--dragging {
+  opacity: 0.4;
+  background: var(--paper);
+}
+.tbl--editing tbody tr.tr--target-above td:first-child {
+  box-shadow: inset 0 3px 0 var(--red);
+}
+.tbl--editing tbody tr.tr--target-below td:last-child {
+  box-shadow: inset 0 -3px 0 var(--red);
+}
+.tbl--editing tbody tr.tr--target-above td {
+  box-shadow: inset 0 3px 0 var(--red);
+}
+.tbl--editing tbody tr.tr--target-below td {
+  box-shadow: inset 0 -3px 0 var(--red);
+}
+
+.tbl__grip {
+  width: 22px;
+  color: var(--ink-faint);
+  cursor: grab;
+  user-select: none;
+  text-align: center;
+  vertical-align: middle;
+  padding-right: 0 !important;
+}
+.tbl__grip:active { cursor: grabbing; }
+.tbl__grip svg { display: inline-block; vertical-align: middle; }
+.tbl--editing tbody tr:hover .tbl__grip { color: var(--ink-3); }
+
+.tbl__hide {
+  width: 28px;
+  text-align: center;
+  vertical-align: middle;
+  padding-left: 0 !important;
+}
+.tbl__hide button {
+  appearance: none;
+  width: 22px; height: 22px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.tbl__hide button:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--paper);
+}
+
+/* Finding wrap (carousel cards in edit mode) */
+.finding-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.12s, transform 0.12s;
+}
+.findings__track > .finding-wrap {
+  scroll-snap-align: start;
+  min-width: 0;
+}
+.findings__track > .finding-wrap > .finding {
+  flex: 1;
+}
+/* The delete badge overhangs each card's top-left by ~10px. The scroll
+   track clips overflow (overflow-x:auto forces overflow-y to clip too), so
+   pad the track and pull it back with matching negative margins — the cards
+   stay put while the badges get room to show. */
+body.edit-homescreen .findings__track {
+  padding-top: 16px;
+  padding-left: 16px;
+  margin-top: -16px;
+  margin-left: -16px;
+  scroll-padding-left: 16px;
+}
+body.editing-overview .finding-wrap {
+  padding-top: 30px;
+}
+.finding-wrap__chrome {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 8px 8px 0 0;
+  z-index: 3;
+  user-select: none;
+}
+.finding-wrap__grip {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: grab;
+}
+.finding-wrap__grip:active { cursor: grabbing; }
+.finding-wrap__hide {
+  appearance: none;
+  width: 18px; height: 18px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.12s, color 0.12s;
+}
+.finding-wrap__hide:hover { background: var(--red); color: var(--paper); }
+.finding-wrap--dragging { opacity: 0.4; }
+.finding-wrap--target { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 6px; }
+.finding-wrap[draggable="true"] { cursor: grab; }
+.finding-wrap[draggable="true"]:active { cursor: grabbing; }
+
+/* ═════════════════════════════════════════════════════════════ */
+/* HOMESCREEN edit style — looks like the dashboard, jiggles      */
+/* like iOS, drag-to-rearrange. Activated when body has class    */
+/* `edit-homescreen`. Selectively undoes the heavy chrome from   */
+/* the editorial/tactile treatments above.                       */
+/* ═════════════════════════════════════════════════════════════ */
+
+/* No subtle background dim — keep the live dashboard look. */
+body.edit-homescreen { background: var(--paper); }
+html[data-theme="dark"] body.edit-homescreen { background: var(--vellum); }
+
+/* Section frames: strip the dark header bar, outline, padding. The
+   section underneath renders identically to view mode. */
+body.edit-homescreen .sec-frame {
+  border: 0;
+  padding: 0;
+  margin: 0 0 32px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+body.edit-homescreen .sec-frame:hover {
+  border-color: transparent;
+  box-shadow: none;
+}
+body.edit-homescreen .sec-frame__chrome {
+  /* Hide the dark title bar — section keeps its native title. */
+  background: transparent;
+  position: static;
+  height: auto;
+  padding: 0;
+  pointer-events: none;
+  border-radius: 0;
+}
+body.edit-homescreen .sec-frame__handle {
+  /* Drag handle: invisible label, but still grabs. Place over the
+     section header so the whole header reads as draggable. */
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: 32px;
+  color: transparent;
+  cursor: grab;
+  z-index: 1;
+}
+body.edit-homescreen .sec-frame__handle:active { cursor: grabbing; }
+body.edit-homescreen .sec-frame__handle svg { display: none; }
+body.edit-homescreen .sec-frame__body { padding: 0; }
+
+/* iOS-style minus button (top-left of each draggable element) */
+body.edit-homescreen .sec-frame__eye,
+body.edit-homescreen .kpi-frame__x,
+body.edit-homescreen .hero-frame__hide,
+body.edit-homescreen .attn-frame__hide,
+body.edit-homescreen .finding-wrap__hide {
+  position: absolute;
+  top: -10px; left: -10px;
+  right: auto;
+  width: 26px; height: 26px;
+  padding: 0;
+  /* Kill the inherited transitions on color/bg/border — they get
+     stuck at currentTime 0 in some iframes and freeze the visible
+     colors at their pre-override values. */
+  transition: none !important;
+  background-color: var(--ink) !important;
+  background-image: none !important;
+  color: #fff !important;
+  border-width: 2px !important;
+  border-style: solid !important;
+  border-color: var(--paper) !important;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-size: 0;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  z-index: 6;
+  animation: none !important;
+}
+body.edit-homescreen .sec-frame__eye:hover,
+body.edit-homescreen .kpi-frame__x:hover,
+body.edit-homescreen .hero-frame__hide:hover,
+body.edit-homescreen .attn-frame__hide:hover,
+body.edit-homescreen .finding-wrap__hide:hover {
+  background-color: var(--red) !important;
+  border-color: var(--paper) !important;
+}
+/* Replace any inner text/icons with a clean minus glyph */
+body.edit-homescreen .sec-frame__eye::before,
+body.edit-homescreen .kpi-frame__x::before,
+body.edit-homescreen .hero-frame__hide::before,
+body.edit-homescreen .attn-frame__hide::before,
+body.edit-homescreen .finding-wrap__hide::before {
+  content: '';
+  width: 12px;
+  height: 2.5px;
+  background: currentColor;
+  border-radius: 2px;
+}
+body.edit-homescreen .sec-frame__eye svg,
+body.edit-homescreen .kpi-frame__x svg,
+body.edit-homescreen .hero-frame__hide svg,
+body.edit-homescreen .attn-frame__hide svg,
+body.edit-homescreen .finding-wrap__hide svg { display: none; }
+
+/* Position the minus button on the section relative to the section block */
+body.edit-homescreen .sec-frame { position: relative; }
+body.edit-homescreen .sec-frame > .sec-frame__chrome > .sec-frame__eye {
+  top: -10px; left: -10px;
+}
+
+/* KPI tile: strip the outline + grip + swap label; keep the X repurposed */
+body.edit-homescreen .kpi-frame {
+  outline: 0;
+  border-radius: 0;
+  position: relative;
+}
+body.edit-homescreen .kpi-frame--target {
+  outline: 0;
+  background: rgba(0, 85, 150, 0.06); /* blue context tint */
+}
+body.edit-homescreen .kpi-frame--target::after { display: none; }
+body.edit-homescreen .kpi-frame__grip { display: none; }
+body.edit-homescreen .kpi-frame[draggable="true"] { cursor: grab; }
+body.edit-homescreen .kpi-frame[draggable="true"]:active { cursor: grabbing; }
+
+/* Hero / agenda / hero-summary: drop the 32px top strip & vellum bar.
+   The native block reads as the draggable surface. We intentionally do NOT
+   zero padding-top here — the tiles keep their natural top padding (22px in
+   brand layout) so the kicker labels stay clear of the overhanging corner
+   remove button instead of riding up against the top edge. The editing-overview
+   44px strip rule is scoped out of homescreen mode, so native padding wins. */
+body.edit-homescreen .hero::before,
+body.edit-homescreen .hero-today::before,
+body.edit-homescreen .hero-summary::before {
+  display: none;
+}
+
+/* Finding wrap: drop the dark mini-header, show only the minus button */
+body.edit-homescreen .finding-wrap {
+  padding-top: 0;
+  position: relative;
+}
+body.edit-homescreen .finding-wrap__chrome {
+  background: transparent;
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  padding: 0;
+  pointer-events: none;
+  border-radius: 0;
+}
+body.edit-homescreen .finding-wrap__grip {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  cursor: grab;
+  pointer-events: auto;
+}
+body.edit-homescreen .finding-wrap__grip:active { cursor: grabbing; }
+body.edit-homescreen .finding-wrap__grip svg { display: none; }
+body.edit-homescreen .finding-wrap__hide { pointer-events: auto; }
+
+/* Drop indicators: keep them, but use blue (context) instead of red */
+body.edit-homescreen .sec-frame__drop {
+  background: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0, 85, 150, 0.18);
+}
+
+/* No right-side palette padding — the modpal floats over the dashboard */
+body.edit-homescreen .report { padding-right: var(--pad-x); }
+
+/* Don't dim the pagehead — the dashboard view stays full-strength */
+body.edit-homescreen .pagehead { opacity: 1; }
+
+/* The hero + attention tiles clip their content (overflow:hidden) for rounded
+   corners. In edit mode that also clips the corner remove buttons — let them
+   show. The buttons sit on the .hero-frame/.attn-frame wrappers, which never
+   clip, but lift the tile clip too so nothing reads as cut off. */
+body.editing-overview .hero,
+body.editing-overview .hero-summary { overflow: visible; }
+body.edit-homescreen .hero-frame,
+body.edit-homescreen .attn-frame { overflow: visible; }
+
+/* ─── iOS jiggle ───────────────────────────────────────────── */
+/* Authentic iOS feel: a slow, gentle rock — rotation paired with a
+   tiny orbital translate so it sways rather than vibrates. Period is
+   ~0.4s with soft ease-in-out; amplitude is small. */
+@keyframes ios-jiggle-a {
+  0%   { transform: rotate(-0.85deg) translate(-0.4px, -0.4px); }
+  50%  { transform: rotate(0.85deg)  translate(0.4px, 0.4px); }
+  100% { transform: rotate(-0.85deg) translate(-0.4px, -0.4px); }
+}
+@keyframes ios-jiggle-b {
+  0%   { transform: rotate(0.85deg)  translate(0.4px, -0.4px); }
+  50%  { transform: rotate(-0.85deg) translate(-0.4px, 0.4px); }
+  100% { transform: rotate(0.85deg)  translate(0.4px, -0.4px); }
+}
+
+/* Apply to KPI tiles, sections, hero/agenda/summary, and findings */
+body.edit-homescreen .kpi-frame,
+body.edit-homescreen .sec-frame,
+body.edit-homescreen .finding-wrap,
+body.edit-homescreen .hero,
+body.edit-homescreen .hero-today,
+body.edit-homescreen .hero-summary {
+  animation: ios-jiggle-a 0.6s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+/* Adjacent tiles within a container counter-rotate: odd tiles rock one way
+   (jiggle-a), even tiles mirror it (jiggle-b). Keeping the SAME period is what
+   makes the opposing motion read clearly — differing durations drift in and
+   out of phase and end up looking synced. This signals the tiles are a loose,
+   reorderable set rather than a fixed block. */
+body.edit-homescreen .kpi-frame:nth-child(2n),
+body.edit-homescreen .sec-frame:nth-of-type(2n),
+body.edit-homescreen .finding-wrap:nth-child(2n),
+body.edit-homescreen .hero-today,
+body.edit-homescreen .hero-summary {
+  animation-name: ios-jiggle-b;
+}
+/* Pause jiggle only on the element being dragged — iOS keeps everything
+   else rocking even under the cursor. (Hover-pause made the large
+   Departments / Recent Gifts containers sit still whenever the pointer
+   was over them, which read as "not always shaking".) */
+body.edit-homescreen .kpi-frame--dragging,
+body.edit-homescreen .sec-frame--dragging,
+body.edit-homescreen .finding-wrap--dragging {
+  animation-play-state: paused;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.edit-homescreen .kpi-frame,
+  body.edit-homescreen .sec-frame,
+  body.edit-homescreen .finding-wrap,
+  body.edit-homescreen .hero,
+  body.edit-homescreen .hero-today,
+  body.edit-homescreen .hero-summary {
+    animation: none;
+  }
+}
+
+/* Custom-bar variant — homescreen uses a calmer pill, not a heavy ink slab */
+.custom-bar--homescreen .custom-bar__inner {
+  background: var(--ink);
+  color: var(--paper);
+}
+.custom-bar--homescreen .custom-bar__sq { background: var(--blue); }
