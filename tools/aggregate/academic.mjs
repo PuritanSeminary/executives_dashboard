@@ -232,6 +232,8 @@ async function loadCampuses(client) {
   const rows = await client.list('/campuses');
   const m = new Map();
   for (const c of rows) {
+    // Drop obvious test/placeholder campuses (state/city literally "Made up").
+    if (/made up/i.test(`${c.state || ''} ${c.city || ''}`)) continue;
     m.set(String(c.id), {
       name: decode(c.name),
       country: c.country,               // ISO-2
@@ -251,9 +253,34 @@ function spread([lat, lon], i) {
   return [+(lat + r * Math.sin(ang)).toFixed(3), +(lon + r * Math.cos(ang)).toFixed(3)];
 }
 
+// Fan out campuses that resolve to (nearly) the same coordinates — e.g. two schools
+// in one city (Alexandria, Mérida) — so their pins don't stack invisibly on the globe.
+// The first keeps its true location; the rest ride a small ring around it. Purely a
+// display nudge; the label still names the real city.
+function deconflictPins(list) {
+  const groups = new Map();
+  for (const c of list) {
+    const k = `${Math.round(c.lat)},${Math.round(c.lon)}`; // ~1° cell
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(c);
+  }
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    g.sort((a, b) => (b.enrolled || 0) - (a.enrolled || 0)); // largest keeps its true spot
+    const lat0 = g[0].lat, lon0 = g[0].lon;
+    for (let i = 1; i < g.length; i++) {
+      // Start SE (tends to stay on land for coastal cities), then golden-angle around.
+      const ang = (-60 + (i - 1) * 137.5) * Math.PI / 180, r = 2.0;
+      g[i].lat = +(lat0 + r * Math.sin(ang)).toFixed(3);
+      g[i].lon = +(lon0 + r * Math.cos(ang)).toFixed(3);
+    }
+  }
+}
+
 function buildGlobe(courses, campusMap) {
   const centroids = STATIC.countryCentroids || {};
   const overrides = STATIC.campusOverrides || {};
+  const cities = STATIC.campusCities || {};
   const byCampus = new Map();
   for (const c of courses) {
     const key = c.campusId == null ? 'unassigned' : String(c.campusId);
@@ -278,7 +305,7 @@ function buildGlobe(courses, campusMap) {
       const idx = (perCountry[meta.country] = (perCountry[meta.country] ?? -1) + 1);
       const [lat, lon] = Array.isArray(overrides[key]) ? overrides[key] : spread(coords, idx);
       campuses.push({
-        id: key, institution: meta.name, city: meta.state, country: meta.countryFull,
+        id: key, institution: meta.name, city: cities[key] || meta.state || '', country: meta.countryFull,
         lat, lon, hub: meta.hub, courses: g.list.length, enrolled: g.enrolled,
       });
       const ca = countryAgg.get(meta.countryFull) || { country: meta.countryFull, institution: meta.name, courses: 0 };
@@ -294,6 +321,7 @@ function buildGlobe(courses, campusMap) {
       });
     }
   }
+  deconflictPins(campuses); // separate co-located pins (e.g. two Alexandria schools)
   campuses.sort((a, b) => (b.hub ? 1 : 0) - (a.hub ? 1 : 0) || b.enrolled - a.enrolled);
   const partners = [...countryAgg.values()].sort((a, b) => b.courses - a.courses);
   return { campuses, partners, campusCourses, unmapped };

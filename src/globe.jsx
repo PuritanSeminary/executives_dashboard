@@ -186,13 +186,12 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
   const rotRef = React.useRef({ lon: -52, lat: 22 });
   const targetRef = React.useRef(null);
   const dragRef = React.useRef(null);
-  const spinRef = React.useRef(true);
-  // Resume idle auto-spin a few seconds after the last interaction.
-  const lastTouchRef = React.useRef(typeof performance !== 'undefined' ? performance.now() : 0);
+  // The globe is still by default; it rotates gently ONLY while the pointer is over
+  // it — and not while hovering a pin, so pins stay clickable. Set from the SVG's
+  // pointer enter/leave. (Idle auto-spin was distracting.)
+  const overRef = React.useRef(false);
   const selectedRef = React.useRef(selectedId);
-  const IDLE_MS = 4000;
   React.useEffect(() => { selectedRef.current = selectedId; }, [selectedId]);
-  const touch = () => { lastTouchRef.current = (typeof performance !== 'undefined' ? performance.now() : Date.now()); };
 
   // Responsive square sizing
   React.useEffect(() => {
@@ -209,7 +208,7 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
   React.useEffect(() => {
     if (!selectedId) return;
     const c = campuses.find(x => x.id === selectedId);
-    if (c) { targetRef.current = { lon: c.lon, lat: Math.max(-55, Math.min(55, c.lat)) }; spinRef.current = false; }
+    if (c) { targetRef.current = { lon: c.lon, lat: Math.max(-55, Math.min(55, c.lat)) }; }
   }, [selectedId, campuses]);
 
   // Single animation loop: auto-spin + glide-to-target
@@ -229,15 +228,9 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
           rot.lon = t.lon; rot.lat = t.lat; targetRef.current = null;
         } else { rot.lon += dLon * 0.12; rot.lat += dLat * 0.12; }
         changed = true;
-      } else if (!reduceMotion && spinRef.current && !dragRef.current && !hoverRef.current) {
-        rot.lon += 0.12; changed = true;
-      } else if (!reduceMotion && !dragRef.current && !hoverRef.current && !selectedRef.current) {
-        // Untouched for a while → quietly resume turning.
-        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-        if (now - lastTouchRef.current > IDLE_MS) {
-          spinRef.current = true;
-          rot.lon += 0.12; changed = true;
-        }
+      } else if (!reduceMotion && overRef.current && !dragRef.current && !hoverRef.current && !selectedRef.current) {
+        // Rotate only while the pointer hovers the globe (and not a pin).
+        rot.lon += 0.10; changed = true;
       }
       if (rot.lon > 180) rot.lon -= 360;
       if (rot.lon < -180) rot.lon += 360;
@@ -383,7 +376,7 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
 
   // Pointer rotation
   const onDown = (e) => {
-    spinRef.current = false; targetRef.current = null; touch();
+    targetRef.current = null;
     dragRef.current = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false };
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
@@ -395,7 +388,6 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
     rot.lon -= dx * 0.45;
     rot.lat = Math.max(-85, Math.min(85, rot.lat + dy * 0.45));
     d.x = e.clientX; d.y = e.clientY;
-    touch();
     setFrame(f => (f + 1) % 1e6);
   };
   // On release: if the press wasn't a drag, treat it as a click and hit-test
@@ -403,7 +395,7 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
   // pin, so we can't rely on the pin's own onClick.)
   const onUp = (e) => {
     const d = dragRef.current;
-    dragRef.current = null; touch();
+    dragRef.current = null;
     if (!d || d.moved || !e || e.clientX == null) return;
     const svg = e.currentTarget;
     if (!svg || !svg.getBoundingClientRect) return;
@@ -420,6 +412,9 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
     }
     if (best) onSelect(best.id === selectedId ? null : best.id);
   };
+  // Track pointer presence over the globe so it rotates only on hover.
+  const onEnter = () => { overRef.current = true; };
+  const onLeave = (e) => { overRef.current = false; onUp(e); };
 
   const cx = size / 2, cy = size / 2, R = size * 0.42;
   const rot = rotRef.current;
@@ -437,7 +432,8 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
         <canvas ref={canvasRef} className="globe__canvas" />
         <svg
           className="globe__svg" width={size} height={size} viewBox={`0 0 ${size} ${size}`}
-          onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}
+          onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
+          onPointerEnter={onEnter} onPointerLeave={onLeave}
           style={{ cursor: dragRef.current ? 'grabbing' : 'grab', touchAction: 'none' }}
         >
           {markers.map(({ c, p, status, idx, active }) => {
@@ -448,8 +444,8 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
             return (
               <g key={c.id} transform={`translate(${p.x},${p.y})`}
                  style={{ cursor: 'pointer' }}
-                 onPointerEnter={() => { if (dragRef.current) return; touch(); setHover(c.id); }}
-                 onPointerLeave={() => { if (dragRef.current) return; touch(); setHover(null); }}>
+                 onPointerEnter={() => { if (dragRef.current) return; setHover(c.id); }}
+                 onPointerLeave={() => { if (dragRef.current) return; setHover(null); }}>
                 {/* generous invisible hit target so pins are easy to click */}
                 <circle cx="0" cy={-1.1 * r} r={Math.max(15, r * 2.6)} fill="transparent" />
                 {/* soft halo that pulses outward from behind the bulb */}
@@ -459,13 +455,19 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
                 </circle>
                 {/* rounded teardrop pin — tip marks the location, solid fill */}
                 <path d={pinPath(r)} fill={status.color} strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
-                {active && (
-                  <g style={{ pointerEvents: 'none' }}>
-                    <rect x={r + 7} y={bulbY - 16} width={labelW(c)} height="31" rx="3" fill="#1C1C1C" />
-                    <text x={r + 16} y={bulbY - 2} fontSize="11.5" fontWeight="700" fill="#fff" fontFamily="var(--sans)">{c.city}</text>
-                    <text x={r + 16} y={bulbY + 11} fontSize="10" fill="rgba(255,255,255,0.72)" fontFamily="var(--sans)">{c.country}</text>
-                  </g>
-                )}
+                {active && (() => {
+                  const name = instName(c), loc = locality(c), w = labelW(c);
+                  const flip = p.x > size * 0.6;              // near right edge → label to the left
+                  const boxX = flip ? -(r + 7 + w) : r + 7;
+                  const txtX = boxX + 9;
+                  return (
+                    <g style={{ pointerEvents: 'none' }}>
+                      <rect x={boxX} y={bulbY - 20} width={w} height="38" rx="3" fill="#1C1C1C" />
+                      <text x={txtX} y={bulbY - 2} fontSize="13" fontWeight="700" fill="#fff" fontFamily="var(--sans)">{name}</text>
+                      <text x={txtX} y={bulbY + 12} fontSize="10" fill="rgba(255,255,255,0.74)" fontFamily="var(--sans)">{loc}</text>
+                    </g>
+                  );
+                })()}
               </g>
             );
           })}
@@ -474,6 +476,10 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
     </div>
   );
 }
-function labelW(c) { return Math.max(c.city.length, c.country.length) * 7.2 + 22; }
+// Hover label helpers: school name large (clipped), "city · country" small.
+function clip(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; }
+function instName(c) { return clip(String(c.institution || '').replace(/\s*-\s*Main Campus$/i, ''), 34); }
+function locality(c) { return [c.city, c.country].filter(Boolean).join(' · '); }
+function labelW(c) { return Math.round(Math.max(instName(c).length * 7.3, locality(c).length * 5.9)) + 20; }
 
 Object.assign(window, { CampusGlobe, coverageOf, STATUS });

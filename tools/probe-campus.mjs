@@ -17,7 +17,7 @@ console.log(`=== /campuses (${list.length}) — id | ctry | state | primary | na
 for (const c of list.sort((a, b) => String(a.country).localeCompare(String(b.country)))) {
   console.log(
     `  ${String(c.id).padEnd(6)} ${String(c.country ?? '--').padEnd(4)} ` +
-    `${String(c.state ?? '').padEnd(20)} ${c.primary ? 'HUB' : '   '} ${c.name}`
+    `${String(c.state ?? '').padEnd(16)} ${c.primary ? 'HUB' : '   '} ${String(c.name).padEnd(42)} :: ${String(c.city ?? '').replace(/\s+/g, ' ').trim()}`
   );
 }
 const countries = [...new Set(list.map((c) => c.country).filter(Boolean))].sort();
