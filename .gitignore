@@ -1,0 +1,19 @@
+
+sky_source/
+.env
+refresh_token.txt
+*.key
+
+# Extracted mapping/reference tables — all derived from the gitignored .pbix
+# (and the fact CSVs are large). Regenerate via the extraction script, don't commit.
+mapping/
+
+# Azure Functions (sky-pipeline) — never commit local secrets or build artifacts
+sky-pipeline/local.settings.json
+local.settings.json
+__pycache__/
+*.pyc
+.python_packages/
+bin/
+obj/
+.venv/

@@ -586,8 +586,12 @@ window.PRTS_DATA = {
     lastCompleteLabel: MONTHS[YTD_IDXS[YTD_IDXS.length - 1]].full,
   },
   meta: {
+    // financialLive flips to true once real data from /api/financial is applied
+    // (see applyLiveFinancial). Until then the finance figures are mock/sample.
+    financialLive: false,
+    financialGeneratedAt: null,
     sources: {
-      financial:  { system: 'Financial Edge NXT', cadence: 'Monthly', lastSync: 'May 31, 2026' },
+      financial:  { system: 'Financial Edge NXT', cadence: 'Weekly', lastSync: 'May 31, 2026' },
       donations:  { system: "Raiser's Edge NXT",  cadence: 'Monthly', lastSync: 'May 31, 2026' },
       hr:         { system: 'Paycor',             cadence: 'Monthly', lastSync: 'May 31, 2026' },
       academic:   { system: 'Populi',             cadence: 'Per semester', lastSync: 'Mar 15, 2026' },
@@ -678,4 +682,106 @@ window.PRTS_API.refresh = function refresh() {
   // (nested finance/donations objects are mutated in place and shared through).
   window.PRTS_DATA = Object.assign({}, D);
   return stamp;
+};
+
+// ───────────────────────────────────────────────────────
+// LIVE HYDRATION (v1) — fetch the cached financial JSON the backend pipeline
+// writes from Financial Edge query 71 and overwrite ONLY the v1 fields in place:
+// revenue-by-category (YTD actual), total YTD expense, and net. Everything else
+// (budget, prior-year, MTD, grants, donations, HR, academic) stays on the mock
+// values above until those pipelines exist. On any failure the dashboard keeps
+// the mock data and renders normally. Mirrors the mutate-in-place + new-top-ref
+// pattern used by refresh() above so React memos keyed on PRTS_DATA recompute.
+// ───────────────────────────────────────────────────────
+window.PRTS_FINANCIAL_ENDPOINT = '/api/financial';
+
+function applyLiveFinancial(live) {
+  if (!live || !live.revenue || !live.expense || !live.net) return false;
+  const D = window.PRTS_DATA;
+  const fin = D.finance;
+
+  // 1. Revenue by category -> categories[].ytdActual, matched by name. Budget,
+  //    prior-year and MTD columns are left on their mock values.
+  const byCat = live.revenue.by_category || {};
+  fin.revenue.categories.forEach((c) => {
+    if (Object.prototype.hasOwnProperty.call(byCat, c.name)) c.ytdActual = byCat[c.name];
+  });
+  const unmatched = Object.keys(byCat).filter(
+    (name) => !fin.revenue.categories.some((c) => c.name === name)
+  );
+  if (unmatched.length) {
+    // Revenue landed in a category with no UI row (e.g. an unexpected dept). It
+    // still counts in the YTD total below; surfaced here for the PBI comparison.
+    console.warn('[PRTS] live revenue categories with no matching UI row:', unmatched);
+  }
+
+  // 2. Revenue YTD actual + recomputed variance (budget stays mock).
+  fin.revenue.ytd.actual = live.revenue.ytd_actual;
+  fin.revenue.ytd.variance =
+    (fin.revenue.ytd.actual - fin.revenue.ytd.budget) / fin.revenue.ytd.budget;
+
+  // 3. Total YTD expense + variance. finance.statement.expenseTotal.ytd.actual is
+  //    a value copy made at load time, so update it too (revenueTotal/net are refs).
+  fin.ytd.spend = live.expense.ytd_actual;
+  fin.ytd.variance = (fin.ytd.spend - fin.ytd.budget) / fin.ytd.budget;
+  if (fin.statement && fin.statement.expenseTotal && fin.statement.expenseTotal.ytd) {
+    fin.statement.expenseTotal.ytd.actual = live.expense.ytd_actual;
+  }
+
+  // 4. Net YTD actual.
+  fin.net.ytd.actual = live.net.ytd_actual;
+
+  // 5. Stamp provenance from the pipeline's generated_at.
+  let stamp = live.generated_at || '';
+  try {
+    stamp = new Date(live.generated_at).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  } catch (e) { /* keep raw string */ }
+  if (D.meta) {
+    D.meta.financialLive = true;                       // real data now showing
+    D.meta.financialGeneratedAt = live.generated_at || null; // raw ISO for age math
+    D.meta.lastRefresh = stamp;
+    if (D.meta.sources && D.meta.sources.financial) D.meta.sources.financial.lastSync = stamp;
+  }
+  return true;
+}
+
+// Fetch + apply. Returns true if live data was applied, false if it fell back to
+// mock. Safe to call repeatedly (e.g. on mount and on manual refresh).
+window.PRTS_HYDRATE = async function hydrateFinancial() {
+  try {
+    const res = await fetch(window.PRTS_FINANCIAL_ENDPOINT, { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      console.warn('[PRTS] financial endpoint not ready (HTTP ' + res.status + '); using mock data.');
+      return false;
+    }
+    const applied = applyLiveFinancial(await res.json());
+    if (applied) window.PRTS_DATA = Object.assign({}, window.PRTS_DATA);
+    return applied;
+  } catch (e) {
+    console.warn('[PRTS] financial hydrate failed, staying on mock:', e && e.message);
+    return false;
+  }
+};
+
+// Freshness + staleness for the Financial view. The pipeline runs WEEKLY, so we
+// only warn when the data is older than PRTS_FINANCIAL_STALE_DAYS — i.e. the
+// weekly pull has actually been failing, not merely "it's been a few days".
+window.PRTS_FINANCIAL_STALE_DAYS = 10;
+window.PRTS_API.financialStatus = function financialStatus() {
+  const D = window.PRTS_DATA;
+  const live = !!(D.meta && D.meta.financialLive);
+  const iso = D.meta && D.meta.financialGeneratedAt;
+  let label = null, ageDays = null, stale = false;
+  if (iso) {
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) {
+      label = d.toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+      });
+      ageDays = (Date.now() - d.getTime()) / 86400000;
+      stale = live && ageDays > window.PRTS_FINANCIAL_STALE_DAYS;
+    }
+  }
+  return { live, generatedAt: iso || null, label, ageDays, stale };
 };

@@ -1,0 +1,22 @@
+{
+  "_comment": "Copy to local.settings.json (GIT-IGNORED) and fill in real values for local runs. In Azure, set these as Function App Application Settings instead. NEVER commit real secrets.",
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+
+    "SKY_CLIENT_ID": "",
+    "SKY_CLIENT_SECRET": "",
+    "SKY_SUBSCRIPTION_KEY": "",
+
+    "BLOB_CONNECTION_STRING": "",
+
+    "TOKEN_CONTAINER": "secrets",
+    "TOKEN_BLOB": "sky-refresh-token.txt",
+    "CACHE_CONTAINER": "cache",
+    "CACHE_BLOB": "financial.json",
+
+    "QUERY_ID_TRANSACTIONS": "71",
+    "SKY_SCHEDULE_CRON": "0 30 6 * * *"
+  }
+}

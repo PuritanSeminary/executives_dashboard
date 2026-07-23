@@ -5,6 +5,11 @@ function FinancialView({ rangeId, onDrill }) {
   const D = window.PRTS_DATA;
   const F = D.finance;
   const V = window.PRTS_VIEW;
+  // Live-data freshness — drives the "Data as of" stamp and the staleness /
+  // sample-data banners below.
+  const fin = (window.PRTS_API && window.PRTS_API.financialStatus)
+    ? window.PRTS_API.financialStatus()
+    : { live: false, label: null, stale: false };
   const months = D.months;
   const [from, to] = rangeSlice(rangeId, months.length);
 
@@ -55,12 +60,32 @@ function FinancialView({ rangeId, onDrill }) {
     <>
       <Brief
         kicker="Business Office"
-        date={"As of " + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+        date={fin.live ? ('Data as of ' + (fin.label || 'latest pull')) : 'Sample data — no live pull yet'}
         headline="Financial"
         sources={[
           { label: 'Source', value: 'Financial Edge NXT' },
         ]}
       />
+
+      {/* Staleness banner — only when live data is older than the weekly cadence
+          allows (>10 days), i.e. the pull has actually been failing. */}
+      {fin.stale && (
+        <div role="alert" style={{
+          margin: '12px 0', padding: '10px 14px', borderRadius: 8, fontWeight: 600,
+          background: '#FBEAEA', color: '#7A1F1F', border: '1px solid #E3B4B4',
+        }}>
+          ⚠️ Financial data may be out of date — last updated {fin.label}
+        </div>
+      )}
+      {/* Sample-data notice — only when there has NEVER been a successful pull. */}
+      {!fin.live && (
+        <div role="note" style={{
+          margin: '12px 0', padding: '10px 14px', borderRadius: 8, fontWeight: 600,
+          background: '#FDF6E3', color: '#6B5A1E', border: '1px solid #E8D9A6',
+        }}>
+          Sample / placeholder data — no live financial pull yet. Figures below are illustrative.
+        </div>
+      )}
 
       {/* ── Revenue, expense and net — YTD + MTD, each vs. its own budget ── */}
       <div className="grid grid--4">
