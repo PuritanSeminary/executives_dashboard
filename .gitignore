@@ -1,0 +1,26 @@
+# Secrets — never commit tokens/keys
+*.key
+*.pem
+.env
+.env.*
+local.settings.json
+populi.key
+paycor.key
+paycor.local.json
+blackbaud.local.json
+comp-load.local.json
+
+# Node
+node_modules/
+npm-debug.log*
+dist/
+build/
+
+# Aggregator local output
+tools/**/snapshot.json
+snapshot.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

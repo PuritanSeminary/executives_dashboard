@@ -22,6 +22,11 @@ const fmt = {
     const s = n >= 0 ? '+' : '−';
     return s + Math.abs(n * 100).toFixed(d) + '%';
   },
+  // GPA-safe: null / non-numeric → em-dash instead of a crash or "0.00".
+  gpa(n) {
+    const v = Number(n);
+    return (n == null || !Number.isFinite(v)) ? '—' : v.toFixed(2);
+  },
 };
 window.fmt = fmt;
 
@@ -51,13 +56,20 @@ function yTicks(max, n = 4) {
 // ───────────────────────────────────────────────────────────────────────
 // Sparkline — tiny inline trend chart for KPI cards
 // ───────────────────────────────────────────────────────────────────────
-function Sparkline({ data, color = 'currentColor', height = 38, fill = true, dot = true }) {
+function Sparkline({ data, color = 'currentColor', height = 38, fill = true, dot = true, yFloor = null }) {
   const W = 200, H = height;
   const pad = 2;
-  const max = Math.max(...data) * 1.05;
-  const min = Math.min(...data) * 0.95;
+  const clean = (Array.isArray(data) ? data : []).filter((v) => Number.isFinite(Number(v))).map(Number);
+  if (clean.length === 0) return <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H }} />;
+  const rawMax = Math.max(...clean), rawMin = Math.min(...clean);
+  const max = rawMax * 1.05;
+  // Anchor the floor to a domain-meaningful value when given (0 for counts, ~3.0 for
+  // GPA) so low-variance series don't get vertically exaggerated into fake drama.
+  const min = yFloor != null ? Math.min(yFloor, rawMin) : rawMin * 0.95;
   const range = max - min || 1;
-  const xs = (i) => pad + (i / (data.length - 1)) * (W - pad * 2);
+  const single = clean.length === 1;
+  data = clean;
+  const xs = (i) => (single ? W / 2 : pad + (i / (data.length - 1)) * (W - pad * 2));
   const ys = (v) => H - pad - ((v - min) / range) * (H - pad * 2);
   const points = data.map((v, i) => `${xs(i).toFixed(2)},${ys(v).toFixed(2)}`).join(' ');
   const area = `M ${xs(0)},${H - pad} L ${points.split(' ').join(' L ')} L ${xs(data.length - 1)},${H - pad} Z`;

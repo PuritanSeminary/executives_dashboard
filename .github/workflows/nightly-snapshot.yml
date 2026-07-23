@@ -1,0 +1,39 @@
+name: Nightly data snapshot
+
+# Pulls Populi (academic) [+ Paycor (hr), once wired] and writes snapshot.json to
+# Azure Blob, which the SWA /api/snapshot function serves. SWA-managed Functions are
+# HTTP-only (no timer), so the schedule lives here in Actions.
+on:
+  schedule:
+    - cron: '0 7 * * *' # 07:00 UTC (~2–3am ET) nightly
+  workflow_dispatch: {} # manual "Run workflow" button
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/aggregate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        run: npm ci || npm install
+      - name: Build & upload snapshot
+        env:
+          # Populi (academic)
+          POPULI_API_KEY: ${{ secrets.POPULI_API_KEY }}
+          # Paycor (hr) — Standard-type app, refresh_token grant
+          PAYCOR_CLIENT_ID: ${{ secrets.PAYCOR_CLIENT_ID }}
+          PAYCOR_CLIENT_SECRET: ${{ secrets.PAYCOR_CLIENT_SECRET }}
+          PAYCOR_SUBSCRIPTION_KEY: ${{ secrets.PAYCOR_SUBSCRIPTION_KEY }}
+          PAYCOR_REFRESH_TOKEN: ${{ secrets.PAYCOR_REFRESH_TOKEN }}
+          PAYCOR_TOKEN_URL: ${{ secrets.PAYCOR_TOKEN_URL }}
+          PAYCOR_LEGAL_ENTITY_ID: ${{ secrets.PAYCOR_LEGAL_ENTITY_ID }}
+          # Azure Blob (output)
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_STORAGE_CONTAINER: dashboard
+        # Builds academic (Populi) + hr (Paycor) and uploads the combined snapshot.
+        run: node index.mjs

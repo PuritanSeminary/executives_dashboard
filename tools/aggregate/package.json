@@ -1,0 +1,16 @@
+{
+  "name": "prts-dashboard-aggregate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nightly aggregator: pulls Populi (academic) + Paycor (HR) into snapshot.json for the PRTS executive dashboard.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node index.mjs",
+    "build:academic": "node index.mjs --only=academic",
+    "build:hr": "node index.mjs --only=hr"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.17.0"
+  }
+}

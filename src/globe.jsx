@@ -125,6 +125,15 @@ const STATUS = {
   gaps:    { key: 'gaps',    label: 'Coverage gaps', color: '#DA2037', soft: '#FBE2E6' },
 };
 function coverageOf(campus, catalogLen) {
+  // Live data has no core-catalog mapping — color pins by course volume instead so
+  // the globe still reads sensibly. Mock data keeps the coverage-of-catalog model.
+  if (!campus.offered) {
+    const n = campus.courses || 0;
+    let status = STATUS.gaps;
+    if (n >= 10) status = STATUS.full;
+    else if (n >= 4) status = STATUS.partial;
+    return { ratio: null, status };
+  }
   const ratio = campus.offered.length / catalogLen;
   let status = STATUS.gaps;
   if (ratio >= 0.8) status = STATUS.full;
@@ -206,6 +215,7 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
   // Single animation loop: auto-spin + glide-to-target
   React.useEffect(() => {
     let raf;
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const tick = () => {
       const rot = rotRef.current;
       let changed = false;
@@ -219,9 +229,9 @@ function CampusGlobe({ campuses, catalogLen, selectedId, onSelect }) {
           rot.lon = t.lon; rot.lat = t.lat; targetRef.current = null;
         } else { rot.lon += dLon * 0.12; rot.lat += dLat * 0.12; }
         changed = true;
-      } else if (spinRef.current && !dragRef.current && !hoverRef.current) {
+      } else if (!reduceMotion && spinRef.current && !dragRef.current && !hoverRef.current) {
         rot.lon += 0.12; changed = true;
-      } else if (!dragRef.current && !hoverRef.current && !selectedRef.current) {
+      } else if (!reduceMotion && !dragRef.current && !hoverRef.current && !selectedRef.current) {
         // Untouched for a while → quietly resume turning.
         const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         if (now - lastTouchRef.current > IDLE_MS) {

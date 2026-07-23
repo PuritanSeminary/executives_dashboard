@@ -1,0 +1,37 @@
+{
+  "_comment": "Country centroids (ISO-3166 alpha-2 → [lat, lon]) for the academic globe. Populi's /campuses record supplies each campus's country/state/primary LIVE, so campuses are no longer hand-curated — only country→coordinates live here. Multiple campuses in one country are spread around the centroid by the aggregator. Add a country here if a new campus's ISO code isn't listed. `campusOverrides` lets you pin a specific campus to exact city coords if country-level precision isn't enough.",
+  "countryCentroids": {
+    "AO": [-11.20, 17.87],
+    "AU": [-25.27, 133.77],
+    "BO": [-16.29, -63.59],
+    "BR": [-14.24, -51.93],
+    "BY": [53.71, 27.95],
+    "CL": [-35.68, -71.54],
+    "CN": [35.86, 104.20],
+    "CO": [4.57, -74.30],
+    "DE": [51.17, 10.45],
+    "EC": [-1.83, -78.18],
+    "EG": [26.82, 30.80],
+    "ES": [40.46, -3.75],
+    "GB": [55.38, -3.44],
+    "GH": [7.95, -1.02],
+    "HU": [47.16, 19.50],
+    "IN": [20.59, 78.96],
+    "KE": [-0.02, 37.91],
+    "KH": [12.57, 104.99],
+    "LV": [56.88, 24.60],
+    "MW": [-13.25, 34.30],
+    "MX": [23.63, -102.55],
+    "MZ": [-18.67, 35.53],
+    "NG": [9.08, 8.68],
+    "PE": [-9.19, -75.02],
+    "PT": [39.40, -8.22],
+    "TH": [15.87, 100.99],
+    "TW": [23.70, 120.96],
+    "US": [37.09, -95.71],
+    "ZA": [-30.56, 22.94]
+  },
+  "campusOverrides": {
+    "_note": "Optional per-campus exact coords: \"<campus_id>\": [lat, lon]. Overrides the country centroid for that campus."
+  }
+}

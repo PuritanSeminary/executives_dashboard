@@ -552,7 +552,7 @@ function CardInfo({ children, align = 'left' }) {
 
 }
 
-function KPICard({ label, value, delta, deltaLabel, caption, spark, sparkColor = 'var(--ink)', accent, status, onClick }) {
+function KPICard({ label, value, delta, deltaLabel, caption, spark, sparkColor = 'var(--ink)', sparkFloor = null, accent, status, onClick }) {
   let dcls = 'kpi__delta kpi__delta--flat';
   let arrow = '·';
   if (delta != null) {
@@ -580,7 +580,7 @@ function KPICard({ label, value, delta, deltaLabel, caption, spark, sparkColor =
       {caption && <div className="kpi__info"><CardInfo align="right">{caption}</CardInfo></div>}
       {spark &&
       <div className="kpi__spark">
-          <Sparkline data={spark} color={sparkColor} height={28} dot={false} fill={false} />
+          <Sparkline data={spark} color={sparkColor} height={28} dot={false} fill={false} yFloor={sparkFloor} />
         </div>
       }
     </div>);
@@ -820,7 +820,7 @@ function SectionHd({ kicker, title, lead, roman }) {
 }
 
 // Legacy KPI alias → modern KPICard
-function KPI({ label, value, unit, delta, deltaLabel = 'vs. prior', caption, spark, sparkColor = 'var(--ink)', status, source, cite, onClick }) {
+function KPI({ label, value, unit, delta, deltaLabel = 'vs. prior', caption, spark, sparkColor = 'var(--ink)', sparkFloor = null, status, source, cite, onClick }) {
   const accent = status === 'bad' ? 'accent' :
   status === 'warn' ? 'warn' :
   status === 'ok' ? 'pos' :
@@ -834,6 +834,7 @@ function KPI({ label, value, unit, delta, deltaLabel = 'vs. prior', caption, spa
       caption={caption}
       spark={spark}
       sparkColor={sparkColor}
+      sparkFloor={sparkFloor}
       accent={accent}
       onClick={onClick} />);
 

@@ -1,0 +1,12 @@
+{
+  "_comment": "Blackbaud SKY API — Financial Edge NXT (GL / finance) + Raiser's Edge NXT (donations). Copy to blackbaud.local.json (gitignored) and fill from your Blackbaud developer account / the Azure app's stored secrets. Auth = OAuth2 authorization_code; every call sends Authorization: Bearer <token> + Bb-Api-Subscription-Key: <key>. NOTE: SKY refresh tokens ROTATE on each use (single-use, ~60-day life) — the nightly job must persist the new one each run.",
+  "client_id": "<SKY Application ID>",
+  "client_secret": "<SKY Application secret>",
+  "subscription_key": "<Bb-Api-Subscription-Key (primary access key)>",
+  "token_url": "https://oauth2.sky.blackbaud.com/token",
+  "authorize_url": "https://oauth2.sky.blackbaud.com/authorization",
+  "redirect_uri": "<the redirect URI registered on the SKY app>",
+  "refresh_token": "<from the OAuth authorization_code flow>",
+  "access_token": "<optional: paste a token to verify immediately without the refresh call>",
+  "base": "https://api.sky.blackbaud.com"
+}

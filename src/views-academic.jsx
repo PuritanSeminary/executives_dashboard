@@ -5,15 +5,13 @@
 // table. (Emoji flags don't render on Windows/Chromium — they fall back to
 // bare letter pairs — so we use flagcdn raster flags instead.)
 const COUNTRY_ISO = {
-  'United States': 'us',
-  'Netherlands': 'nl',
-  'Brazil': 'br',
-  'South Africa': 'za',
-  'Indonesia': 'id',
-  'United Kingdom': 'gb',
-  'Kenya': 'ke',
-  'India': 'in',
-  'Antarctica': 'aq',
+  'United States': 'us', 'Netherlands': 'nl', 'Brazil': 'br', 'South Africa': 'za',
+  'Indonesia': 'id', 'United Kingdom': 'gb', 'Kenya': 'ke', 'India': 'in', 'Antarctica': 'aq',
+  'Mexico': 'mx', 'Peru': 'pe', 'Colombia': 'co', 'Hungary': 'hu', 'Belarus': 'by',
+  'Chile': 'cl', 'Germany': 'de', 'Thailand': 'th', 'Egypt': 'eg', 'Cambodia': 'kh',
+  'Mozambique': 'mz', 'Portugal': 'pt', 'Taiwan': 'tw', 'Latvia': 'lv', 'Australia': 'au',
+  'Ghana': 'gh', 'Bolivia': 'bo', 'Malawi': 'mw', 'Ecuador': 'ec', 'Angola': 'ao',
+  'Nigeria': 'ng', 'China': 'cn', 'Spain': 'es',
 };
 
 function CountryFlag({ name }) {
@@ -35,7 +33,13 @@ function AcademicView({ rangeId, onDrill }) {
   const A = D.academic;
   const catalog = A.coreCatalog;
   const [campusSel, setCampusSel] = React.useState(null);
-  const selected = campusSel ? A.campuses.find(c => c.id === campusSel) : null;
+  // Historical class term — drives ONLY the classes/globe section (defaults to current).
+  const [classTerm, setClassTerm] = React.useState(A.currentClassTerm || null);
+  // Active term's class dataset; falls back to current top-level fields (mock / pre-hydrate).
+  const TC = (A.termClasses && classTerm && A.termClasses[classTerm])
+    || { campuses: A.campuses, partners: A.partners, campusCourses: A.campusCourses, totalCourses: A.totalCourses };
+  const campuses = TC.campuses || [];
+  const selected = campusSel ? campuses.find(c => c.id === campusSel) : null;
 
   // On a wide screen, cap the overview/courses card to the globe's height and
   // let its content scroll inside — so the row never stretches taller than the
@@ -66,20 +70,48 @@ function AcademicView({ rangeId, onDrill }) {
     return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', apply); };
   }, [selected]);
 
-  const latestFunnel = A.funnel[A.funnel.length - 1];
+  const funnel = A.funnel || [];
+  const latestFunnel = funnel.length ? funnel[funnel.length - 1] : { semester: '', inquiries: 0, applications: 0, accepted: 0, matriculated: 0 };
+  const funnelLabel = latestFunnel.semester || (A.censusTerm && A.censusTerm.label) || '';
+  // Acceptance & yield rates across terms (from the funnel).
+  const funnelLabels = funnel.map(f => f.semester);
+  const acceptSeries = funnel.map(f => (f.applications ? +(f.accepted / f.applications * 100).toFixed(1) : 0));
+  const yieldSeries = funnel.map(f => (f.accepted ? +(f.matriculated / f.accepted * 100).toFixed(1) : 0));
 
-  // Application-to-acceptance and enrolment ratios — across semesters
-  const acceptanceRate = A.funnel.map(f => f.accepted / f.applications);
-  const matriculationRate = A.funnel.map(f => f.matriculated / f.accepted);
+  // Null-safe percent delta — no comparison when the baseline is missing/zero.
+  const pctDelta = (cur, prev) => (prev ? (cur - prev) / prev : null);
+  // GPA display helpers (live data can carry null GPAs).
+  const gpaPrograms = (A.programs || []).filter(p => p.gpa != null);
+  const topGpaProgram = gpaPrograms.length ? gpaPrograms.reduce((a, b) => (b.gpa > a.gpa ? b : a)) : null;
+  // Graduation sparkline: mature cohorts only — immature ones read ~0% and mislead.
+  const gradSpark = (A.outcomes || []).filter(o => !o.partial).map(o => o.graduation);
+  // Student : faculty ratio — residential degree-seeking students (excludes the distance
+  // "MA (Religion)" degree) ÷ FT professors (faculty count from Paycor HR).
+  const DISTANCE_PROGRAM = /\(religion\)/i;
+  const residentialStudents = ((A.programs || []).filter(p => !DISTANCE_PROGRAM.test(p.name)).reduce((s, p) => s + p.students, 0)) || A.totalStudents;
+  const distanceStudents = Math.max(0, (A.totalStudents || 0) - residentialStudents);
+  const faculty = (D.hr && D.hr.faculty) || null;
+  const sfRatio = (faculty && residentialStudents) ? residentialStudents / faculty : null;       // in-person
+  const overallRatio = (faculty && A.totalStudents) ? A.totalStudents / faculty : null;           // incl. distance
 
   // Two course tables that live in the right column (and stay visible beneath
   // the campus overview when a pin is selected) — keeps everything in one place.
   const coursesByCountryBlock = (
     <div className={'card-sec' + (selected ? ' card-sec--div' : '')}>
-      <div className="card__hd">
+      <div className="card__hd" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <h3 className="card__title">Courses by country & partner<CardInfo>{A.totalCourses} total · primary delivery in Grand Rapids, with {A.totalCourses - A.partners[0].courses} partner-delivered offerings. Select a pin on the globe for a campus breakdown.</CardInfo></h3>
+          <h3 className="card__title">Courses by country & partner<CardInfo>{TC.totalCourses} offerings in {classTerm || 'the current term'}. Click a school to focus the globe and see its classes.</CardInfo></h3>
         </div>
+        {A.classTerms && A.classTerms.length > 1 && (
+          <select
+            value={classTerm}
+            onChange={e => { setClassTerm(e.target.value); setCampusSel(null); }}
+            aria-label="Class term"
+            style={{ fontFamily: 'var(--sans)', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.02em', padding: '4px 8px', border: '1px solid var(--rule)', background: 'var(--paper)', color: 'var(--ink-2)', borderRadius: 0, cursor: 'pointer' }}
+          >
+            {[...A.classTerms].reverse().map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        )}
       </div>
       <div className="coursescroll">
       <table className="tbl">
@@ -92,23 +124,33 @@ function AcademicView({ rangeId, onDrill }) {
           </tr>
         </thead>
         <tbody>
-          {A.partners.map((p, i) => {
-            const pct = p.courses / A.totalCourses;
-            return (
-              <tr key={i}>
-                <td className="label" style={{ whiteSpace: 'nowrap' }}>
-                  <CountryFlag name={p.country} />{p.country}
-                </td>
-                <td className="muted" style={{ fontSize: 12 }}>{p.institution}</td>
-                <td>
-                  <div style={{ height: 5, background: 'var(--rule)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{ width: `${pct * 100}%`, height: '100%', background: 'var(--blue)', opacity: 0.7 + (1 - i / 8) * 0.3 }} />
-                  </div>
-                </td>
-                <td className="num">{p.courses}</td>
-              </tr>
-            );
-          })}
+          {[...campuses]
+            .sort((a, b) => String(a.country).localeCompare(String(b.country)) || b.courses - a.courses)
+            .map((c) => {
+              const pct = TC.totalCourses ? c.courses / TC.totalCourses : 0;
+              const isSel = c.id === campusSel;
+              return (
+                <tr key={c.id}
+                  onClick={() => setCampusSel(isSel ? null : c.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCampusSel(isSel ? null : c.id); } }}
+                  role="button" tabIndex={0}
+                  aria-selected={isSel}
+                  aria-label={`Show ${c.institution} classes`}
+                  title={`Show ${c.institution}'s classes`}
+                  style={{ cursor: 'pointer', background: isSel ? 'var(--vellum)' : undefined }}>
+                  <td className="label" style={{ whiteSpace: 'nowrap' }}>
+                    <CountryFlag name={c.country} />{c.country}
+                  </td>
+                  <td className="muted" style={{ fontSize: 12 }}>{c.institution}{c.hub && <span className="tag tag--ink" style={{ marginLeft: 6, fontSize: 9 }}>hub</span>}</td>
+                  <td>
+                    <div style={{ height: 5, background: 'var(--rule)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct * 100}%`, height: '100%', background: 'var(--blue)' }} />
+                    </div>
+                  </td>
+                  <td className="num">{c.courses}</td>
+                </tr>
+              );
+            })}
         </tbody>
       </table>
       </div>
@@ -127,7 +169,9 @@ function AcademicView({ rangeId, onDrill }) {
       </thead>
       <tbody>
         {rows.map((c, i) => {
-          const fill = c.enrolled / c.cap;
+          const uncapped = !c.cap;
+          const over = !uncapped && c.enrolled > c.cap;
+          const fill = uncapped ? 0 : Math.min(1, c.enrolled / c.cap);
           return (
             <tr key={i}>
               <td className="label">
@@ -135,11 +179,15 @@ function AcademicView({ rangeId, onDrill }) {
                 <span className="tbl__sub">{c.instructor}</span>
               </td>
               <td>
-                <div style={{ height: 5, background: 'var(--rule)', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ width: `${fill * 100}%`, height: '100%', background: 'var(--blue)' }} />
-                </div>
+                {uncapped ? (
+                  <span className="mono" style={{ fontSize: 10.5, color: 'var(--ink-4)' }}>uncapped</span>
+                ) : (
+                  <div style={{ height: 5, background: 'var(--rule)', borderRadius: 2, overflow: 'hidden' }} title={over ? `${c.enrolled - c.cap} over capacity` : undefined}>
+                    <div style={{ width: `${fill * 100}%`, height: '100%', background: over ? 'var(--oxblood)' : 'var(--blue)' }} />
+                  </div>
+                )}
               </td>
-              <td className="num">{c.enrolled}<span style={{ color: 'var(--ink-4)' }}> / {c.cap}</span></td>
+              <td className="num">{c.enrolled}{!uncapped && <span style={{ color: over ? 'var(--oxblood)' : 'var(--ink-4)' }}> / {c.cap}{over ? ` (+${c.enrolled - c.cap})` : ''}</span>}</td>
             </tr>
           );
         })}
@@ -163,43 +211,51 @@ function AcademicView({ rangeId, onDrill }) {
       />
 
       {/* ── Stats ───────────────────────────────────────── */}
-      <div className="grid grid--4">
+      <div className="grid grid--5">
         <KPI
           label="Total enrolled"
           value={A.totalStudents}
-          delta={(A.totalStudents - A.priorYearEnrollment) / A.priorYearEnrollment}
-          deltaLabel="vs. Spring '25"
-          caption={`${A.programs.length} active degree programs. Highest census since 2018.`}
+          delta={pctDelta(A.totalStudents, A.priorYearEnrollment)}
+          deltaLabel="vs. prior year"
+          caption={`${residentialStudents} residential · ${distanceStudents} distance${A.visitingStudents ? ` · +${A.visitingStudents} visiting` : ''}.`}
           spark={A.enrollmentTrend}
           sparkColor="var(--ink-3)"
+          sparkFloor={0}
           source="Populi"
         />
         <KPI
           label="Average GPA"
-          value={A.gpaWeighted.toFixed(2)}
-          delta={(A.gpaWeighted - A.gpaPriorYear) / A.gpaPriorYear}
+          value={fmt.gpa(A.gpaWeighted)}
+          delta={pctDelta(A.gpaWeighted, A.gpaPriorYear)}
           deltaLabel="vs. prior year"
-          caption={`Weighted across all programs. ThM remains highest at ${Math.max(...A.programs.map(p => p.gpa)).toFixed(2)}.`}
+          caption={`Weighted across all programs.${topGpaProgram ? ` ${topGpaProgram.name} highest at ${fmt.gpa(topGpaProgram.gpa)}.` : ''}`}
           spark={A.gpaTrend}
           sparkColor="var(--ink-3)"
+          sparkFloor={3}
         />
         <KPI
           label="Courses offered"
           value={A.totalCourses}
-          delta={(A.totalCourses - A.coursesPriorYear) / A.coursesPriorYear}
+          delta={pctDelta(A.totalCourses, A.coursesPriorYear)}
           deltaLabel="vs. prior year"
-          caption={`Across ${A.partners.length} institutions in ${new Set(A.partners.map(p => p.country)).size} countries.`}
+          caption={`Across ${(A.campuses || []).length} schools in ${new Set((A.campuses || []).map(c => c.country)).size} countries.`}
           spark={A.coursesTrend}
           sparkColor="var(--ink-3)"
+          sparkFloor={0}
         />
         <KPI
           label="Graduation rate"
-          value={fmt.pct(A.gradRate, 0)}
-          delta={(A.gradRate - A.gradRatePrev) / A.gradRatePrev}
-          deltaLabel="vs. AY '24–25"
-          caption={`Measured 7 years from matriculation. MDiv: ${A.programs.find(p => p.id === 'mdiv') ? '0.89' : '—'}.`}
-          spark={A.outcomes.map(o => o.graduation)}
+          value={A.gradRate != null ? fmt.pct(A.gradRate, 0) : '—'}
+          delta={pctDelta(A.gradRate, A.gradRatePrev)}
+          deltaLabel="vs. prior cohort"
+          caption={`~6-yr rate${A.gradRateYear ? ` (cohort ${A.gradRateYear})` : ''} · provisional, pending registrar sign-off.`}
+          spark={gradSpark}
           sparkColor="var(--ink-3)"
+        />
+        <KPI
+          label="Student : faculty"
+          value={sfRatio != null ? `${sfRatio.toFixed(1)} : 1` : '—'}
+          caption={faculty ? `Residential (${residentialStudents}) ÷ ${faculty} FT professors · ${overallRatio ? overallRatio.toFixed(1) + ' : 1' : '—'} incl. distance.` : 'Faculty count unavailable.'}
         />
       </div>
 
@@ -227,7 +283,7 @@ function AcademicView({ rangeId, onDrill }) {
                 <tr key={p.id}>
                   <td>
                     <div className="label">{p.name}</div>
-                    <span className="tbl__sub">{p.id.toUpperCase()}</span>
+                    {p.code || (!/^\d+$/.test(String(p.id)) ? <span className="tbl__sub">{String(p.id).toUpperCase()}</span> : null)}
                   </td>
                   <td className="num">{p.students}</td>
                   <td>
@@ -238,8 +294,8 @@ function AcademicView({ rangeId, onDrill }) {
                       <span className="mono tnum" style={{ fontSize: 11, color: 'var(--ink-3)', minWidth: 32 }}>{fmt.pct(share, 0)}</span>
                     </div>
                   </td>
-                  <td className="num">{p.gpa.toFixed(2)}</td>
-                  <td className="num muted">{p.length} <span style={{ color: 'var(--ink-4)', fontSize: 11 }}>yr</span></td>
+                  <td className="num">{fmt.gpa(p.gpa)}</td>
+                  <td className="num muted">{p.length != null ? <>{p.length} <span style={{ color: 'var(--ink-4)', fontSize: 11 }}>yr</span></> : '—'}</td>
                 </tr>
               );
             })}
@@ -252,7 +308,7 @@ function AcademicView({ rangeId, onDrill }) {
         <div className="card span-6">
           <div className="card__hd">
             <div>
-              <h3 className="card__title">Admissions funnel — Spring 2026<CardInfo>Inquiry → application → acceptance → matriculation.</CardInfo></h3>
+              <h3 className="card__title">Admissions funnel — {funnelLabel}<CardInfo>Inquiry → application → acceptance → matriculation. Matriculated is counted from actual new enrollments; provisional pending registrar sign-off.</CardInfo></h3>
             </div>
           </div>
           <Funnel
@@ -264,12 +320,27 @@ function AcademicView({ rangeId, onDrill }) {
             ]}
             color="var(--navy)"
           />
+          {funnel.length > 1 && (
+            <div className="card-sec card-sec--div" style={{ marginTop: 14 }}>
+              <div className="card__hd"><div><h3 className="card__title">Acceptance &amp; yield trend<CardInfo>Acceptance = accepted ÷ applications; yield = matriculated ÷ accepted, per term.</CardInfo></h3></div></div>
+              <LineChart
+                series={[
+                  { name: 'Acceptance %', data: acceptSeries, color: 'var(--navy)' },
+                  { name: 'Yield %', data: yieldSeries, color: 'var(--gold)' },
+                ]}
+                labels={funnelLabels}
+                height={150}
+                yMin={0}
+                format={(v) => `${Math.round(v)}%`}
+              />
+            </div>
+          )}
         </div>
 
         <div className="card span-6">
           <div className="card__hd">
             <div>
-              <h3 className="card__title">Outcomes by academic year<CardInfo>Matriculation, retention and graduation rates, by academic year.</CardInfo></h3>
+              <h3 className="card__title">Outcomes by academic year<CardInfo>Matriculation, retention and graduation rates, by academic year. Newest cohorts are marked partial (graduation not yet mature). Provisional — pending registrar sign-off.</CardInfo></h3>
             </div>
           </div>
           <table className="tbl tbl--dense">
@@ -300,7 +371,7 @@ function AcademicView({ rangeId, onDrill }) {
         <div className="campuscover span-6" style={{ marginTop: 0 }}>
           <div className="globewrap">
             <CampusGlobe
-              campuses={A.campuses}
+              campuses={campuses}
               catalogLen={catalog.length}
               selectedId={campusSel}
               onSelect={setCampusSel}
@@ -310,11 +381,14 @@ function AcademicView({ rangeId, onDrill }) {
 
         <div className="card span-6" ref={overviewCardRef}>
           {selected ? (() => {
+            const isLive = !selected.offered; // live campuses carry courses/enrolled, not core-catalog offered[]
             const { ratio, status } = coverageOf(selected, catalog.length);
             const offeredSet = new Set(selected.offered);
             const offered = catalog.filter(c => offeredSet.has(c.id));
             const missing = catalog.filter(c => !offeredSet.has(c.id));
-            const campusTop = A.campusCourses[selected.id] || [];
+            const campusTop = (TC.campusCourses && TC.campusCourses[selected.id]) || [];
+            const liveLabel = selected.hub ? 'Main campus'
+              : (selected.courses >= 10 ? 'Major site' : selected.courses >= 4 ? 'Active site' : 'Emerging site');
             return (
               <>
                 <div className="campusdetail">
@@ -327,11 +401,15 @@ function AcademicView({ rangeId, onDrill }) {
                       <span className="campusdetail__loc">{selected.city} · {selected.country}</span>
                     </div>
                     <span className="campusdetail__pill" style={{ background: status.soft, color: status.color }}>
-                      <span className="d" style={{ background: status.color }} />{status.label}
+                      <span className="d" style={{ background: status.color }} />{isLive ? liveLabel : status.label}
                     </span>
                   </div>
-                  <div className="campusdetail__meta">Offers <b>{offered.length}</b> of <b>{catalog.length}</b> core courses · <b>{fmt.pct(ratio, 0)}</b> coverage</div>
-                  {missing.length > 0 && (
+                  {isLive ? (
+                    <div className="campusdetail__meta"><b>{selected.courses}</b> courses · <b>{selected.enrolled}</b> enrolled this term</div>
+                  ) : (
+                    <div className="campusdetail__meta">Offers <b>{offered.length}</b> of <b>{catalog.length}</b> core courses · <b>{fmt.pct(ratio, 0)}</b> coverage</div>
+                  )}
+                  {!isLive && missing.length > 0 && (
                     <div className="gaps">
                       <span className="gaps__label">Not offered</span>
                       {missing.map(c => <span key={c.id} className="gaps__chip">{c.title}</span>)}
@@ -341,7 +419,7 @@ function AcademicView({ rangeId, onDrill }) {
                 <div className="card-sec card-sec--div">
                   <div className="card__hd">
                     <div>
-                      <h3 className="card__title">Top course enrollments<CardInfo>Spring 2026 at {selected.city} ({selected.institution}), ordered by enrollment. Representative data.</CardInfo></h3>
+                      <h3 className="card__title">Top course enrollments<CardInfo>{classTerm || 'Current term'} at {selected.city} ({selected.institution}), ordered by enrollment.</CardInfo></h3>
                     </div>
                   </div>
                   {topCoursesTable(campusTop)}
