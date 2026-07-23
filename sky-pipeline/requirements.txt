@@ -1,0 +1,4 @@
+# Azure Functions Python worker + the pipeline's runtime deps.
+azure-functions
+azure-storage-blob
+requests

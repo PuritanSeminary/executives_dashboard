@@ -209,16 +209,46 @@ function App() {
     setRefreshing((busy) => {
       if (busy) return busy; // ignore re-entrant clicks while a pull is in flight
       // Simulate the round-trip to the proxy/cache, then commit the new data.
-      window.setTimeout(() => {
-        const stamp = window.PRTS_API.refresh();
-        setSyncTime(stamp);
-        setDataVersion((v) => v + 1);
+      window.setTimeout(async () => {
+        const applied = window.PRTS_HYDRATE ? await window.PRTS_HYDRATE() : false;
+        const meta = window.PRTS_DATA.meta || {};
+        if (applied) {
+          const stamp = meta.lastRefresh;
+          setSyncTime(stamp);
+          setDataVersion((v) => v + 1);
+          setToast({ kind: 'ok', text: 'Data refreshed — ' + stamp });
+        } else if (meta.financialLive) {
+          // Live data already loaded but the endpoint is unreachable now. Keep the
+          // last successful cached figures on screen — do NOT fall back to mock.
+          setToast({ kind: 'bad', text: 'Could not reach live data — showing last update' });
+        } else {
+          // No successful pull yet, so the figures are sample data: run the mock sim.
+          const stamp = window.PRTS_API.refresh();
+          setSyncTime(stamp);
+          setDataVersion((v) => v + 1);
+          setToast({ kind: 'ok', text: 'Sample data refreshed — ' + stamp });
+        }
         setRefreshing(false);
-        setToast({ kind: 'ok', text: 'Data refreshed — ' + stamp });
         window.setTimeout(() => setToast(null), 2400);
       }, 850);
       return true;
     });
+  }, []);
+
+  // On mount, hydrate the Financial figures from the live backend cache (SKY
+  // query 71 -> Blob -> /api/financial). Silently keeps the mock data if the
+  // endpoint isn't ready; bumps dataVersion so the view tree re-reads PRTS_DATA.
+  React.useEffect(() => {
+    let cancelled = false;
+    if (typeof window.PRTS_HYDRATE !== 'function') return undefined;
+    window.PRTS_HYDRATE().then((applied) => {
+      if (cancelled || !applied) return;
+      setDataVersion((v) => v + 1);
+      if (window.PRTS_DATA.meta && window.PRTS_DATA.meta.lastRefresh) {
+        setSyncTime(window.PRTS_DATA.meta.lastRefresh);
+      }
+    });
+    return () => { cancelled = true; };
   }, []);
 
   // Keep URL in sync with current chapter (so Share copies a meaningful link)
