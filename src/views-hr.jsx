@@ -3,26 +3,43 @@
 
 function HRView({ rangeId, onDrill }) {
   const D = window.PRTS_DATA;
-  const H = D.hr;
-  const months = D.months;
+  const H = D.hr || {};
+  const hc = H.headcount || [];
+  const curr = hc[hc.length - 1] || { ft: 0, pt: 0, student: 0 };
+  const prior = hc.length >= 13 ? hc[hc.length - 13] : (hc[0] || curr);
+  const pctDelta = (cur, prev) => (prev ? (cur - prev) / prev : null);
+  const asOf = (D.live && D.live.generatedAt) ? new Date(D.live.generatedAt) : new Date();
 
-  const curr = H.headcount[H.headcount.length - 1];
-  const prior = H.headcount[H.headcount.length - 13];
-  const totalNow = curr.ft + curr.pt;
-  const totalPrior = prior.ft + prior.pt;
+  // Open positions (still mock until Paycor Recruiting/ATS is wired).
+  const positions = H.openPositions || [];
+  const daysOpen = (p) => Math.max(0, Math.floor((asOf - new Date(p.posted)) / 86400000));
+  const stalledCount = positions.filter(p => daysOpen(p) > 90 || (p.stage || '').includes('Re-opening')).length;
 
-  const payrollTtm = H.payroll.series.slice(-12).reduce((s, v) => s + v, 0);
-  const payrollPrior = H.payroll.series.slice(-24, -12).reduce((s, v) => s + v, 0);
+  // x-axis labels from live data when present (else the mock calendar), length-matched.
+  const monthLabels = (H.months && H.months.length === hc.length)
+    ? H.months
+    : (D.months || []).map(m => m.label);
 
-  const ftSeries = H.headcount.map(h => h.ft);
-  const ptSeries = H.headcount.map(h => h.pt);
-  const stSeries = H.headcount.map(h => h.student);
+  const ftSeries = hc.map(h => h.ft);
+  const ptSeries = hc.map(h => h.pt);
+  const stSeries = hc.map(h => h.student);
 
-  // Payroll donut segments
-  const payrollSegs = H.payroll.categories.map((c, i) => ({
+  // Payroll: one honest source for both the KPI and the donut — the annualized total.
+  // (The old monthly `series` was a synthetic headcount-scaled proxy; don't derive a YoY from it.)
+  const payroll = H.payroll || { total: 0, categories: [], basis: '' };
+  const loaded = payroll.loaded || null; // fully-loaded comp (base + employer taxes/retirement/benefits), null until GL factor configured
+  const tenure = H.tenure || { median: 0, buckets: [] };
+  // Payroll as % of operating budget (budget still from Financial Edge mock until wired).
+  const budget = (D.finance && D.finance.annualBudget) || null;
+  const payrollPct = (budget && payroll.total) ? payroll.total / budget : null;
+
+  // Donut segments — 8 distinct slots, a neutral reserved for the "Other" rollup.
+  const DONUT = ['var(--oxblood)', 'var(--navy)', 'var(--moss)', 'var(--gold)', 'var(--slate-cool)', 'var(--blue)', 'var(--ink-3)'];
+  const payrollSegs = (payroll.categories || []).map((c, i) => ({
     label: c.name,
     value: c.amount,
-    color: ['var(--oxblood)', 'var(--navy)', 'var(--moss)', 'var(--gold)', 'var(--slate-cool)', 'var(--ink-3)', 'var(--rule-strong)'][i],
+    sub: `${c.fte} FTE · ${fmt.pct(c.share, 0)} of payroll`,
+    color: /other/i.test(c.name) ? 'var(--rule-strong)' : DONUT[i % DONUT.length],
   }));
 
   return (
@@ -37,44 +54,50 @@ function HRView({ rangeId, onDrill }) {
       />
 
       {/* ── Top KPIs ────────────────────────────────────── */}
-      <div className="grid grid--4">
+      <div className="grid grid--5">
         <KPI
           label="Full-time"
           value={curr.ft}
-          delta={(curr.ft - prior.ft) / prior.ft}
-          deltaLabel="vs. same month '25"
-          caption="Faculty + admin + operations. 1 sabbatical."
+          delta={pctDelta(curr.ft, prior.ft)}
+          deltaLabel="vs. prior year"
+          caption="Faculty, administration, and operations staff."
           spark={ftSeries.slice(-24)}
           sparkColor="var(--ink-3)"
+          sparkFloor={0}
           source="Paycor"
         />
         <KPI
           label="Part-time"
           value={curr.pt}
-          delta={(curr.pt - prior.pt) / prior.pt}
-          deltaLabel="vs. same month '25"
-          caption="Adjunct lecturers, library, weekend staff."
+          delta={pctDelta(curr.pt, prior.pt)}
+          deltaLabel="vs. prior year"
+          caption="Part-time and adjunct staff."
           spark={ptSeries.slice(-24)}
           sparkColor="var(--ink-3)"
+          sparkFloor={0}
         />
         <KPI
           label="Student employees"
           value={curr.student}
-          delta={(curr.student - prior.student) / prior.student}
-          deltaLabel="vs. same month '25"
-          caption="Active during term; drops in summer."
+          delta={pctDelta(curr.student, prior.student)}
+          deltaLabel="vs. prior year"
+          caption="Paycor 'Seasonal' worker type; dips in summer term."
           spark={stSeries.slice(-24)}
           sparkColor="var(--ink-3)"
+          sparkFloor={0}
         />
         <KPI
-          label="Payroll, TTM"
-          value={fmt.shortMoney(payrollTtm)}
-          delta={(payrollTtm - payrollPrior) / payrollPrior}
-          deltaLabel="vs. prior 12 mo"
-          caption="Includes benefits, FICA, retirement match."
-          spark={H.payroll.series.slice(-24)}
-          sparkColor="var(--ink-3)"
+          label="Payroll (annualized)"
+          value={fmt.shortMoney(payroll.total)}
+          caption={loaded
+            ? `Base comp. Fully loaded ≈ ${fmt.shortMoney(loaded.total)} incl. employer taxes, retirement & benefits (+${fmt.pct(loaded.factor, 0)}).`
+            : (payroll.basis || 'Annualized base compensation.')}
           source="Paycor"
+        />
+        <KPI
+          label="Payroll % of budget"
+          value={payrollPct != null ? fmt.pct(payrollPct, 0) : '—'}
+          caption={budget ? `Annualized base comp ÷ operating budget (${fmt.shortMoney(budget)}, Financial Edge).` : 'Budget unavailable.'}
         />
       </div>
 
@@ -88,11 +111,11 @@ function HRView({ rangeId, onDrill }) {
         <LineChart
           variant="area"
           series={[
-            { name: 'Full-time',  data: ftSeries, color: 'var(--ink-2)' },
-            { name: 'Part-time',  data: ptSeries, color: 'var(--gold)' },
+            { name: 'Full-time',  data: ftSeries, color: 'var(--navy)' },
+            { name: 'Part-time',  data: ptSeries, color: 'var(--slate-cool)' },
             { name: 'Student',    data: stSeries, color: 'var(--moss)' },
           ]}
-          labels={months.map(m => m.label)}
+          labels={monthLabels}
           height={220}
         />
       </div>
@@ -102,38 +125,35 @@ function HRView({ rangeId, onDrill }) {
         <div className="card span-7">
           <div className="card__hd">
             <div>
-              <h3 className="card__title">Payroll by category, TTM<CardInfo>{fmt.shortMoney(H.payroll.total)} total · faculty dominates as expected for a seminary.</CardInfo></h3>
+              <h3 className="card__title">Payroll by department<CardInfo>{fmt.shortMoney(payroll.total)} total · {payroll.basis || 'annualized base compensation'}. Small departments rolled into "Other".</CardInfo></h3>
             </div>
           </div>
-          <Donut
-            segments={payrollSegs}
-            format={fmt.shortMoney}
-            centerLabel={fmt.shortMoney(H.payroll.total)}
-            centerSub="Payroll TTM"
-            size={180}
-            thickness={22}
-          />
+          <HorizontalBars items={payrollSegs} colorKey="color" format={fmt.shortMoney} />
+          {loaded && (
+            <p className="muted" style={{ fontSize: 11.5, marginTop: 12, lineHeight: 1.6, borderTop: '1px solid var(--rule)', paddingTop: 10 }}>
+              Base compensation shown above. <strong>Fully loaded ≈ {fmt.shortMoney(loaded.total)}</strong> (+{fmt.pct(loaded.factor, 0)}):
+              {' '}employer taxes {fmt.shortMoney(loaded.components[0].amount)} · retirement {fmt.shortMoney(loaded.components[1].amount)} · benefits {fmt.shortMoney(loaded.components[2].amount)}.
+              {loaded.basis ? ` Load factor derived from ${loaded.basis}.` : ''}
+            </p>
+          )}
         </div>
 
         <div className="card span-5">
           <div className="card__hd">
             <div>
-              <h3 className="card__title">Tenure distribution<CardInfo>Median tenure <strong>{H.tenure.median} years</strong> · steady five-year band.</CardInfo></h3>
+              <h3 className="card__title">Tenure distribution<CardInfo>Median tenure <strong>{tenure.median} years</strong>, from Paycor hire dates.</CardInfo></h3>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-            {H.tenure.buckets.map((b, i) => {
-              const max = Math.max(...H.tenure.buckets.map(x => x.count));
-              return (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '78px 1fr 32px', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < H.tenure.buckets.length - 1 ? '1px solid var(--rule)' : 0 }}>
+            {(() => { const tenureMax = Math.max(1, ...tenure.buckets.map(x => x.count)); return tenure.buckets.map((b, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '78px 1fr 32px', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < tenure.buckets.length - 1 ? '1px solid var(--rule)' : 0 }}>
                   <div className="mono" style={{ fontSize: 11.5, color: 'var(--ink-3)', letterSpacing: '0.02em' }}>{b.range}</div>
                   <div style={{ height: 14, background: 'var(--rule)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{ width: `${(b.count / max) * 100}%`, height: '100%', background: 'var(--navy)', opacity: 0.75 }} />
+                    <div style={{ width: `${(b.count / tenureMax) * 100}%`, height: '100%', background: 'var(--navy)', opacity: 0.75 }} />
                   </div>
                   <div className="mono tnum" style={{ fontSize: 13, color: 'var(--ink)', textAlign: 'right' }}>{b.count}</div>
                 </div>
-              );
-            })}
+              )); })()}
           </div>
         </div>
       </div>
@@ -142,9 +162,9 @@ function HRView({ rangeId, onDrill }) {
       <div className="card">
         <div className="card__hd">
           <div>
-            <h3 className="card__title">Open positions<CardInfo>{H.openPositions.length} active searches · ranges from screening to re-open.</CardInfo></h3>
+            <h3 className="card__title">Open positions<CardInfo>{positions.length} active searches · {stalledCount} stalled. Sample data — Paycor Recruiting (ATS) integration pending.</CardInfo></h3>
           </div>
-          <span className="tag tag--warn"><i className="tag__dot" />1 stalled</span>
+          <span className="tag tag--ink" style={{ textTransform: 'none', letterSpacing: '0.01em', fontWeight: 400 }}>sample data</span>
         </div>
         <table className="tbl">
           <thead>
@@ -157,9 +177,9 @@ function HRView({ rangeId, onDrill }) {
             </tr>
           </thead>
           <tbody>
-            {H.openPositions.map((p, i) => {
-              const days = Math.floor((new Date('2026-05-14') - new Date(p.posted)) / 86400000);
-              const stalled = days > 90 || p.stage.includes('Re-opening');
+            {positions.map((p, i) => {
+              const days = daysOpen(p);
+              const stalled = days > 90 || (p.stage || '').includes('Re-opening');
               return (
                 <tr key={i}>
                   <td className="label">{p.title}</td>

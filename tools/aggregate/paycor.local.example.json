@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to paycor.local.json (gitignored) and fill from the Paycor Developer Portal. Auth = OAuth client_credentials. base_v2 handles employees/departments; base_v1 handles per-employee payroll sub-resources (payrates/earnings/taxes/deductions). legal_entity_id is required (no /me in this API).",
+  "client_id": "<OAuth App ID>",
+  "client_secret": "<OAuth Secret>",
+  "subscription_key": "<APIm Subscription Key>",
+  "scope": "<the exact 'cc[CompanyID] ScopeName' string from the app General tab>",
+  "token_url": "https://apis.paycor.com/sts/v1/common/token",
+  "base_v2": "https://apis.paycor.com/v2",
+  "base_v1": "https://apis.paycor.com/v1",
+  "legal_entity_id": "<your PRTS legal entity id>"
+}

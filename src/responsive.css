@@ -111,7 +111,7 @@ body > [data-tweaks-host] { left: 0 !important; }
     padding-top: 14px;
   }
   /* Utility grids */
-  .grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .grid--4, .grid--5 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   .grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 
   /* Topbar — wrap & abbreviate the noise */
@@ -187,7 +187,7 @@ body > [data-tweaks-host] { left: 0 !important; }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 
   /* Generic grids */
-  .grid--4, .grid--3, .grid--2 { grid-template-columns: minmax(0, 1fr) !important; }
+  .grid--4, .grid--5, .grid--3, .grid--2 { grid-template-columns: minmax(0, 1fr) !important; }
 
   /* Tables — allow horizontal scroll instead of squashing columns. */
   .tbl-wrap, .block__body { overflow-x: auto; -webkit-overflow-scrolling: touch; }

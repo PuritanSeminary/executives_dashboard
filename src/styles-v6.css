@@ -763,7 +763,7 @@ html[data-theme="dark"] .layout-picker__menu { background: var(--paper); border-
   .report .grid--12 > .span-6,
   .report .grid--12 > .span-5,
   .report .grid--12 > .span-4 { grid-column: 1 / -1; }
-  .report .grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report .grid--4, .report .grid--5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ─── PAGE HEAD (Bauhaus title plate) ────────────────────── */
@@ -2470,6 +2470,7 @@ html[data-theme="dark"] .finding--click:hover { background: var(--rule-2); }
 .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid--5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .grid--12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 .span-4 { grid-column: span 4; }
 .span-5 { grid-column: span 5; }
@@ -3654,8 +3655,8 @@ html[data-theme="dark"] .chatnudge__msg--agent {
   .barlist__val { font-size: 12pt !important; }
   .barlist__bar { height: 2pt !important; margin-top: 5pt !important; }
 
-  /* KPI tile in legacy .grid--4 (donations stat band, financial KPI band) */
-  .grid--4 > .kpi {
+  /* KPI tile in legacy .grid--4 / .grid--5 (donations stat band, financial KPI band) */
+  .grid--4 > .kpi, .grid--5 > .kpi {
     border: 0.5pt solid #999 !important;
     padding: 8pt 10pt !important;
   }
@@ -3798,7 +3799,7 @@ html[data-theme="dark"] .chatnudge__msg--agent {
 
 /* Legacy grid--4 (KPI band in financial view) — make it look like the
    Bauhaus .kpis band */
-.grid--4 > .kpi {
+.grid--4 > .kpi, .grid--5 > .kpi {
   border: 1px solid var(--ink);
 }
 
@@ -5161,6 +5162,7 @@ body.layout-brand .findings,
 body.layout-brand .grid,
 body.layout-brand .grid--3,
 body.layout-brand .grid--4,
+body.layout-brand .grid--5,
 body.layout-brand .grid--6,
 body.layout-brand .grid--12 {
   border: 0;
@@ -5203,6 +5205,7 @@ body.layout-brand-compact .findings,
 body.layout-brand-compact .grid,
 body.layout-brand-compact .grid--3,
 body.layout-brand-compact .grid--4,
+body.layout-brand-compact .grid--5,
 body.layout-brand-compact .grid--6,
 body.layout-brand-compact .grid--12 { gap: 12px; }
 

@@ -1,0 +1,9 @@
+{
+  "_comment": "Copy to comp-load.local.json (gitignored) and fill with GL actuals for the personnel account groups. Fully-loaded comp = live Paycor base comp x (1 + (payrollTaxes+retirement+insurance)/salaries). Refresh when finance re-runs the GL. Raw totals stay local; only the derived factor + loaded totals reach the snapshot.",
+  "asOf": "2026-07-01",
+  "basis": "FY2026 (Jul 2025-Jun 2026) GL actuals",
+  "salaries": 0,
+  "payrollTaxes": 0,
+  "retirement": 0,
+  "insurance": 0
+}

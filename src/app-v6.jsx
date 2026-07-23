@@ -619,4 +619,10 @@ function ShareDialog({ url, chapter, onClose }) {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+// Merge the live snapshot (if reachable) over the mock PRTS_DATA, then render.
+// Hydration always resolves — on failure the dashboard renders with mock data.
+(window.PRTS_HYDRATE ? window.PRTS_HYDRATE() : Promise.resolve())
+  .catch(function () {})
+  .then(function () {
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  });
